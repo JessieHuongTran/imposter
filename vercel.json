@@ -3,7 +3,6 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "installCommand": "npm install",
-  "functions": {},
   "rewrites": [
     { "source": "/((?!who-knows-who\\.html|hot-or-not\\.html|favicon\\.svg).*)", "destination": "/index.html" }
   ]
