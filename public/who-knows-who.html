@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<title>Who Knows Who Better</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--bg:#05050f;--card:#0d0d1a;--pink:#FF2D78;--yellow:#FFE600;--purple:#B44DFF;--cyan:#00F5FF;--lime:#39FF14;--orange:#FF6B00;--text:#f0eef5;--muted:#6b6b80;--radius:8px}
+html,body{height:100%;font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+body{display:flex;justify-content:center}
+#app{width:100%;max-width:430px;min-height:100dvh;display:flex;flex-direction:column;padding:20px;position:relative}
+#app::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;background:repeating-linear-gradient(to bottom,transparent 0px,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px)}
+.screen{display:none;flex-direction:column;align-items:center;flex:1;animation:fadeUp .15s ease-out}
+.screen.active{display:flex}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+h1{font-family:'Press Start 2P',monospace;font-size:16px;text-align:center;line-height:1.8;color:var(--purple);text-shadow:0 0 7px var(--purple),0 0 20px var(--purple)}
+h2{font-family:'Press Start 2P',monospace;font-size:12px;text-align:center;line-height:1.8;color:var(--pink);text-shadow:0 0 7px var(--pink),0 0 20px var(--pink)}
+.sub{color:var(--muted);font-size:14px;text-align:center;margin-top:6px}
+.emoji-big{font-size:44px;margin:14px 0}
+.btn{width:100%;max-width:320px;min-height:48px;border:2px solid;border-radius:var(--radius);font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:transform .1s,box-shadow .1s;padding:12px 20px;background:var(--bg);user-select:none;display:inline-flex;align-items:center;gap:8px;justify-content:center}
+.btn:active{transform:translateY(2px);box-shadow:none!important}
+.btn-pink{color:var(--pink);border-color:var(--pink);box-shadow:0 0 10px var(--pink),0 0 25px var(--pink)}
+.btn-purple{color:var(--purple);border-color:var(--purple);box-shadow:0 0 10px var(--purple),0 0 25px var(--purple)}
+.btn-yellow{color:var(--yellow);border-color:var(--yellow);box-shadow:0 0 10px var(--yellow),0 0 25px var(--yellow)}
+.btn-cyan{color:var(--cyan);border-color:var(--cyan);box-shadow:0 0 10px var(--cyan),0 0 25px var(--cyan)}
+.btn-lime{color:var(--lime);border-color:var(--lime);box-shadow:0 0 10px var(--lime),0 0 25px var(--lime)}
+.btn-orange{color:var(--orange);border-color:var(--orange);box-shadow:0 0 10px var(--orange),0 0 25px var(--orange)}
+.btn-outline{background:transparent;border:2px solid var(--muted);color:var(--muted)}
+.btn:disabled{opacity:.4;pointer-events:none}
+.btn-sm{min-height:40px;font-size:13px;padding:8px 14px;max-width:none;width:auto}
+.input{width:100%;padding:12px 14px;border-radius:var(--radius);border:2px solid #1a1a2e;background:var(--bg);color:var(--text);font-family:inherit;font-size:15px;font-weight:700;outline:none}
+.input:focus{border-color:var(--yellow);box-shadow:0 0 8px rgba(255,230,0,.2)}
+.input::placeholder{color:#3a3a50}
+label{font-size:12px;color:var(--muted);margin-bottom:4px;display:block;font-weight:600}
+.code-display{display:flex;gap:8px;margin:14px 0}
+.code-char{width:52px;height:64px;border-radius:var(--radius);border:2px solid var(--yellow);background:var(--bg);display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:20px;color:var(--yellow);box-shadow:0 0 10px var(--yellow),0 0 25px var(--yellow)}
+.code-inputs{display:flex;gap:8px;margin:14px 0}
+.code-input{width:52px;height:64px;border-radius:var(--radius);border:2px solid var(--pink);background:var(--bg);color:var(--text);text-align:center;font-family:'Press Start 2P',monospace;font-size:18px;outline:none;text-transform:uppercase}
+.code-input:focus{border-color:var(--yellow);box-shadow:0 0 8px rgba(255,230,0,.25)}
+.slot{width:100%;max-width:320px;padding:12px;border-radius:var(--radius);border:2px solid #1a1a2e;background:var(--bg);margin:4px 0;display:flex;align-items:center;gap:10px}
+.slot.on{border-color:var(--lime);box-shadow:0 0 6px rgba(57,255,20,.2)}
+.dot{width:9px;height:9px;border-radius:50%;background:#1a1a2e}
+.slot.on .dot{background:var(--lime);box-shadow:0 0 6px var(--lime)}
+.spinner{width:18px;height:18px;border:2px solid #1a1a2e;border-top-color:var(--cyan);border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.wait-row{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;margin-top:10px}
+.dot-pulse{display:flex;gap:4px}.dot-pulse span{width:5px;height:5px;border-radius:50%;background:var(--cyan);animation:db 1.2s infinite}.dot-pulse span:nth-child(2){animation-delay:.2s}.dot-pulse span:nth-child(3){animation-delay:.4s}
+@keyframes db{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-7px)}}
+.countdown-num{font-family:'Press Start 2P',monospace;font-size:72px;color:var(--yellow);text-shadow:0 0 20px var(--yellow),0 0 50px var(--yellow);animation:pop .4s ease}
+@keyframes pop{0%{transform:scale(1.4);opacity:0}100%{transform:scale(1);opacity:1}}
+.q-bar{width:100%;max-width:320px;height:4px;border-radius:2px;background:#1a1a2e;margin:8px 0;overflow:hidden}
+.q-bar-fill{height:100%;border-radius:2px;transition:width .3s}
+.q-num{font-family:'Press Start 2P',monospace;font-size:9px;color:var(--muted)}
+.q-text{font-size:17px;font-weight:800;text-align:center;line-height:1.5;margin:12px 0;min-height:56px;display:flex;align-items:center}
+.phase-badge{font-family:'Press Start 2P',monospace;font-size:8px;padding:4px 12px;border-radius:20px;border:1px solid}
+.answer-input{width:100%;max-width:320px;padding:14px;border-radius:var(--radius);border:2px solid var(--purple);background:var(--bg);color:var(--text);font-family:inherit;font-size:16px;font-weight:700;outline:none;text-align:center;min-height:48px}
+.answer-input:focus{border-color:var(--yellow);box-shadow:0 0 8px rgba(255,230,0,.2)}
+.answer-input::placeholder{color:#3a3a50}
+.rev-card{width:100%;max-width:340px;border-radius:var(--radius);background:var(--bg);border:2px solid #1a1a2e;padding:14px;margin:8px auto;animation:revSlide .3s ease-out}
+@keyframes revSlide{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.rev-q{font-size:13px;color:var(--muted);font-weight:700;margin-bottom:10px;text-align:center}
+.rev-pair{border-radius:var(--radius);padding:10px;margin:6px 0;border:1px solid #1a1a2e}
+.rev-pair-label{font-family:'Press Start 2P',monospace;font-size:7px;margin-bottom:6px}
+.rev-row{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px;margin:3px 0}
+.rev-tag{font-size:11px;font-weight:700;min-width:50px}
+.rev-val{font-weight:800;text-align:right;word-break:break-word;flex:1}
+.badge{display:inline-block;padding:3px 10px;border-radius:var(--radius);font-size:11px;font-weight:800;border:1px solid;margin-top:6px}
+.badge.yes{border-color:var(--lime);color:var(--lime);background:rgba(57,255,20,.08)}
+.badge.no{border-color:var(--orange);color:var(--orange);background:rgba(255,107,0,.08)}
+.judge-row{display:flex;gap:6px;justify-content:center;margin-top:6px}
+.jbtn{padding:6px 14px;border-radius:var(--radius);border:2px solid #1a1a2e;background:var(--bg);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:var(--text)}
+.jbtn:active{transform:translateY(1px)}
+.jbtn.sel-y{border-color:var(--lime);color:var(--lime)}.jbtn.sel-n{border-color:var(--orange);color:var(--orange)}
+.score-circle{width:120px;height:120px;border-radius:50%;border:3px solid var(--yellow);display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 0 20px var(--yellow),0 0 40px var(--yellow);margin:16px 0;animation:sg 2s ease infinite alternate}
+@keyframes sg{0%{box-shadow:0 0 15px rgba(255,230,0,.3)}100%{box-shadow:0 0 40px rgba(255,230,0,.5)}}
+.score-num{font-family:'Press Start 2P',monospace;font-size:32px;color:var(--yellow);text-shadow:0 0 8px var(--yellow)}
+.score-of{font-family:'Press Start 2P',monospace;font-size:9px;color:var(--muted)}
+.score-label{font-family:'Press Start 2P',monospace;font-size:11px;color:var(--yellow);text-shadow:0 0 7px var(--yellow)}
+.player-score{text-align:center;padding:10px;border-radius:var(--radius);border:2px solid #1a1a2e}
+.confetti-container{position:fixed;inset:0;pointer-events:none;z-index:999;overflow:hidden}
+.confetti-piece{position:absolute;width:10px;height:10px;top:-20px;animation:cf linear forwards}
+@keyframes cf{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}
+@keyframes neonPulse{0%,100%{opacity:1}50%{opacity:.7}}.pulse-glow{animation:neonPulse 1.5s ease-in-out infinite}
+.back-link{align-self:flex-start;color:var(--muted);font-size:13px;text-decoration:none;margin-bottom:10px}
+.err{color:var(--orange);font-size:13px;font-weight:700;min-height:18px;text-align:center}
+.q-list{width:100%;max-width:320px;max-height:45vh;overflow-y:auto;margin:8px 0}
+.q-item{display:flex;gap:6px;align-items:center;margin:4px 0}
+.q-item input{flex:1;padding:8px 10px;border-radius:var(--radius);border:1px solid #1a1a2e;background:var(--bg);color:var(--text);font-family:inherit;font-size:13px;outline:none}
+.q-item input:focus{border-color:var(--purple)}
+.q-del{background:none;border:none;color:var(--orange);font-size:16px;cursor:pointer;padding:4px 8px}
+.gap{height:10px}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- HOME -->
+<div id="s-home" class="screen active">
+  <div class="emoji-big">💕</div>
+  <h1>WHO KNOWS<br/>WHO BETTER?</h1>
+  <p class="sub">Answer about yourself, then guess your partner's answers!</p>
+  <div style="flex:1"></div>
+  <div style="width:100%;max-width:320px;margin-bottom:12px">
+    <label>Your name</label>
+    <input id="my-name" class="input" placeholder="Enter your name" maxlength="16" style="border-color:var(--purple)"/>
+  </div>
+  <button class="btn btn-pink" onclick="doCreate()">👑 Create Room</button>
+  <div class="gap"></div>
+  <button class="btn btn-outline" onclick="doGoJoin()">🎟️ Join Room</button>
+  <div style="height:24px"></div>
+  <a href="/" class="back-link">← Back to Boom Box</a>
+</div>
+
+<!-- HOST LOBBY -->
+<div id="s-host-lobby" class="screen">
+  <a href="#" class="back-link" onclick="leaveRoom();return false">← Leave</a>
+  <div class="emoji-big">👑</div>
+  <h2>ROOM CODE</h2>
+  <p class="sub">Share this with your partner</p>
+  <div id="code-show" class="code-display"></div>
+  <div class="slot on"><div class="dot"></div><span id="hl-p1" style="font-weight:700;font-size:14px"></span></div>
+  <div class="slot" id="hl-p2-slot"><div class="dot"></div><span style="color:var(--muted);font-size:13px;font-style:italic">Waiting for partner...</span></div>
+  <div style="flex:1"></div>
+  <div class="wait-row" id="hl-wait"><div class="spinner"></div><span>Waiting for partner</span></div>
+</div>
+
+<!-- JOIN -->
+<div id="s-join" class="screen">
+  <a href="#" class="back-link" onclick="showScreen('s-home');return false">← Back</a>
+  <div class="emoji-big">🎟️</div>
+  <h2>ENTER CODE</h2>
+  <div class="code-inputs" id="join-codes"></div>
+  <p id="join-err" class="err"></p>
+  <div class="gap"></div>
+  <button class="btn btn-pink" onclick="doJoin()">Join 🎟️</button>
+</div>
+
+<!-- P2 WAITING FOR SETUP -->
+<div id="s-p2-wait" class="screen" style="justify-content:center">
+  <div class="emoji-big">✨</div>
+  <h2>YOU'RE IN!</h2>
+  <p class="sub" id="p2w-sub"></p>
+  <div style="height:20px"></div>
+  <div class="wait-row"><div class="spinner"></div><span>Host is picking questions...</span></div>
+</div>
+
+<!-- SETUP (host only) -->
+<div id="s-setup" class="screen">
+  <h2>QUESTIONS</h2>
+  <p class="sub">Edit, add, remove, or randomize</p>
+  <div style="display:flex;gap:8px;margin:10px 0;width:100%;max-width:320px">
+    <button class="btn btn-sm btn-cyan" onclick="shuffleQs()">🎲 Shuffle</button>
+    <button class="btn btn-sm btn-orange" onclick="addQ()">+ Add</button>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;width:100%;max-width:320px;margin-bottom:8px">
+    <label style="margin:0;white-space:nowrap">Questions:</label>
+    <button class="btn btn-sm btn-outline" style="width:40px;padding:0" onclick="changeCount(-1)">−</button>
+    <span id="q-count" style="font-family:'Press Start 2P',monospace;font-size:14px;color:var(--yellow);min-width:24px;text-align:center"></span>
+    <button class="btn btn-sm btn-outline" style="width:40px;padding:0" onclick="changeCount(1)">+</button>
+  </div>
+  <div class="q-list" id="q-list"></div>
+  <div style="flex:1"></div>
+  <button class="btn btn-lime pulse-glow" onclick="startGame()">Start Game 🎮</button>
+</div>
+
+<!-- SELF-ANSWER PHASE (go at your own pace) -->
+<div id="s-self" class="screen">
+  <span class="q-num" id="sq-num"></span>
+  <div class="q-bar"><div class="q-bar-fill" id="sq-bar" style="background:linear-gradient(90deg,var(--cyan),var(--purple))"></div></div>
+  <div class="phase-badge" style="color:var(--cyan);border-color:var(--cyan);margin-bottom:4px">ABOUT YOU</div>
+  <div class="q-text" id="sq-text"></div>
+  <input id="sq-input" class="answer-input" placeholder="Your honest answer..." maxlength="80" autocomplete="off"/>
+  <div class="gap"></div>
+  <button class="btn btn-yellow" id="sq-btn" onclick="submitSelf()">Next →</button>
+</div>
+
+<!-- GUESS PHASE (go at your own pace) -->
+<div id="s-guess" class="screen">
+  <span class="q-num" id="gq-num"></span>
+  <div class="q-bar"><div class="q-bar-fill" id="gq-bar" style="background:linear-gradient(90deg,var(--pink),var(--purple))"></div></div>
+  <div class="phase-badge" style="color:var(--pink);border-color:var(--pink);margin-bottom:4px" id="gq-badge">GUESS PARTNER</div>
+  <div class="q-text" id="gq-text"></div>
+  <input id="gq-input" class="answer-input" placeholder="What did they say?" maxlength="80" autocomplete="off"/>
+  <div class="gap"></div>
+  <button class="btn btn-pink" id="gq-btn" onclick="submitGuess()">Next →</button>
+</div>
+
+<!-- WAITING FOR PARTNER TO FINISH -->
+<div id="s-done-waiting" class="screen" style="justify-content:center">
+  <span class="emoji-big">✅</span>
+  <h2 style="color:var(--lime);text-shadow:0 0 7px var(--lime),0 0 20px var(--lime)">YOU'RE DONE!</h2>
+  <p class="sub">Waiting for partner to finish...</p>
+  <div style="height:20px"></div>
+  <div class="wait-row"><div class="dot-pulse"><span></span><span></span><span></span></div><span id="dw-status">Partner is still answering</span></div>
+</div>
+
+<!-- REVEAL -->
+<div id="s-reveal" class="screen">
+  <h2 style="margin-bottom:4px">THE REVEAL 👀</h2>
+  <p class="sub" id="rev-sub"></p>
+  <div id="rev-cards" style="width:100%;overflow-y:auto;flex:1;padding:8px 0 16px"></div>
+  <button class="btn btn-yellow" onclick="showScore()">See Score 🏆</button>
+</div>
+
+<!-- SCORE -->
+<div id="s-score" class="screen">
+  <div id="confetti-box" class="confetti-container"></div>
+  <div class="gap"></div>
+  <div class="score-circle"><div class="score-num" id="sc-num">0</div><div class="score-of" id="sc-of"></div></div>
+  <p class="score-label" id="sc-msg"></p>
+  <p class="sub" id="sc-sub"></p>
+  <div style="display:flex;gap:10px;margin:12px 0;width:100%;max-width:320px">
+    <div class="player-score" style="flex:1;border-color:rgba(255,45,120,.3)">
+      <div style="font-family:'Press Start 2P',monospace;font-size:7px;color:var(--pink);margin-bottom:4px" id="sc-p1-name"></div>
+      <div style="font-size:22px;font-weight:900;color:var(--pink)" id="sc-p1-val"></div>
+      <div style="font-size:11px;color:var(--muted)">correct guesses</div>
+    </div>
+    <div class="player-score" style="flex:1;border-color:rgba(180,77,255,.3)">
+      <div style="font-family:'Press Start 2P',monospace;font-size:7px;color:var(--purple);margin-bottom:4px" id="sc-p2-name"></div>
+      <div style="font-size:22px;font-weight:900;color:var(--purple)" id="sc-p2-val"></div>
+      <div style="font-size:11px;color:var(--muted)">correct guesses</div>
+    </div>
+  </div>
+  <div id="sc-mismatches" style="width:100%;overflow-y:auto;flex:1"></div>
+  <div class="gap"></div>
+  <button class="btn btn-pink" onclick="resetAll()">Play Again 💕</button>
+  <div class="gap"></div>
+  <a href="/" class="btn btn-outline" style="text-decoration:none">Home 🏠</a>
+  <div style="height:16px"></div>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = 'https://llyhendfolaiwwhykwxj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_iRUAAg91O4PR-GKkK7UQ6A_wi-5kVY_';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const ALL_QUESTIONS = [
+  "What is your biggest pet peeve?",
+  "What would you order at McDonald's?",
+  "What do you do first thing in the morning?",
+  "What is your most-used emoji?",
+  "What would you spend $1000 on?",
+  "What TV show could you rewatch forever?",
+  "What is your love language?",
+  "What would your superpower be?",
+  "What is your biggest fear?",
+  "What would your last meal be?",
+  "What song do you sing in the shower?",
+  "What is your guilty pleasure?",
+  "What is your dream holiday destination?",
+  "What snack can you not resist?",
+  "What were you like in high school?",
+  "What makes you cry instantly?",
+  "What is your most embarrassing moment?",
+  "What habit annoys people around you?",
+  "What do you secretly judge people for?",
+  "What is the first thing you notice about someone?"
+];
+
+// ── Sound effects ───────────────────────────────
+let _ac=null;
+function ac(){if(!_ac)_ac=new(window.AudioContext||window.webkitAudioContext)();return _ac}
+function _tone(f,d,t='square',v=.1){const c=ac(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type=t;o.frequency.setValueAtTime(f,c.currentTime);g.gain.setValueAtTime(v,c.currentTime);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+d);o.start(c.currentTime);o.stop(c.currentTime+d)}
+function sfxTap(){_tone(800,.06,'square',.08)}
+function sfxLockIn(){const c=ac();[660,880].forEach((f,i)=>{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='square';o.frequency.setValueAtTime(f,c.currentTime+i*.08);g.gain.setValueAtTime(0,c.currentTime+i*.08);g.gain.linearRampToValueAtTime(.1,c.currentTime+i*.08+.02);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+i*.08+.1);o.start(c.currentTime+i*.08);o.stop(c.currentTime+i*.08+.1)})}
+function sfxNext(){_tone(500,.05,'square',.07);setTimeout(()=>_tone(700,.05,'square',.07),50)}
+function sfxMatch(){const c=ac();[784,1047,1318].forEach((f,i)=>{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='square';o.frequency.setValueAtTime(f,c.currentTime+i*.07);g.gain.setValueAtTime(0,c.currentTime+i*.07);g.gain.linearRampToValueAtTime(.1,c.currentTime+i*.07+.02);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+i*.07+.12);o.start(c.currentTime+i*.07);o.stop(c.currentTime+i*.07+.12)})}
+function sfxMiss(){const c=ac(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='sawtooth';o.frequency.setValueAtTime(300,c.currentTime);o.frequency.exponentialRampToValueAtTime(150,c.currentTime+.15);g.gain.setValueAtTime(.08,c.currentTime);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+.2);o.start(c.currentTime);o.stop(c.currentTime+.2)}
+function sfxCountdown(){_tone(440,.12,'square',.1)}
+function sfxGo(){_tone(880,.2,'square',.14)}
+function sfxFanfare(){const c=ac();[523,659,784,1047,1318].forEach((f,i)=>{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='square';o.frequency.setValueAtTime(f,c.currentTime+i*.08);g.gain.setValueAtTime(0,c.currentTime+i*.08);g.gain.linearRampToValueAtTime(.12,c.currentTime+i*.08+.02);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+i*.08+.12);o.start(c.currentTime+i*.08);o.stop(c.currentTime+i*.08+.12)})}
+
+let room=null, roomCode=null, pNum=null, myName='', channel=null;
+let questions=[];  // for setup
+let myQIdx=0;      // local question index (self phase)
+let myGIdx=0;      // local question index (guess phase)
+let myPhase='self'; // local phase tracker: 'self' | 'guess' | 'done'
+let judgments={};
+
+function $(id){return document.getElementById(id)}
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active')}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function norm(s){return(s||'').toLowerCase().trim().replace(/[^a-z0-9\s]/g,'').replace(/\s+/g,' ')}
+function fuzzy(a,b){const na=norm(a),nb=norm(b);if(!na||!nb)return false;if(na===nb)return true;if(na.includes(nb)||nb.includes(na))return true;if(na.length<20&&nb.length<20&&lev(na,nb)<=2)return true;return false}
+function lev(a,b){const m=a.length,n=b.length,d=Array.from({length:m+1},()=>Array(n+1).fill(0));for(let i=0;i<=m;i++)d[i][0]=i;for(let j=0;j<=n;j++)d[0][j]=j;for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]!==b[j-1]?1:0));return d[m][n]}
+function genCode(){const c='ABCDEFGHJKLMNPQRSTUVWXYZ';let o='';for(let i=0;i<4;i++)o+=c[Math.floor(Math.random()*c.length)];return o}
+
+// ── DB ──────────────────────────────────────────
+async function loadRoom(){const{data}=await sb.from('wkwb_rooms').select('data').eq('code',roomCode).single();if(data)room=data.data;return room}
+async function saveRoom(patch){Object.assign(room,patch);await sb.from('wkwb_rooms').update({data:room}).eq('code',roomCode)}
+function subscribe(cb){
+  channel=sb.channel('room-'+roomCode)
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'wkwb_rooms',filter:'code=eq.'+roomCode},payload=>{
+      room=payload.new.data;cb(room);
+    }).subscribe();
+}
+function unsub(){if(channel){sb.removeChannel(channel);channel=null}}
+
+// ── Create ──────────────────────────────────────
+async function doCreate(){
+  myName=$('my-name').value.trim();if(!myName){$('my-name').focus();return}
+  sfxTap();
+  pNum=1;roomCode=genCode();
+  room={p1:myName,p2:null,phase:'lobby',questions:[],
+    p1_self:{},p2_self:{},p1_guess:{},p2_guess:{},
+    p1_self_done:false,p2_self_done:false,p1_guess_done:false,p2_guess_done:false};
+  await sb.from('wkwb_rooms').insert({code:roomCode,data:room});
+  $('code-show').innerHTML=roomCode.split('').map(c=>`<div class="code-char">${c}</div>`).join('');
+  $('hl-p1').textContent=myName+' (you)';
+  show('s-host-lobby');
+  subscribe(r=>{
+    if(r.p2&&r.phase==='lobby'){
+      const s=$('hl-p2-slot');s.classList.add('on');
+      s.innerHTML=`<div class="dot"></div><span style="font-weight:700;font-size:14px">${esc(r.p2)}</span>`;
+      $('hl-wait').innerHTML='<button class="btn btn-lime pulse-glow" onclick="goSetup()">Set Up Questions ✏️</button>';
+    }
+    onRoomUpdate(r);
+  });
+}
+
+// ── Join ────────────────────────────────────────
+function doGoJoin(){
+  myName=$('my-name').value.trim();if(!myName){$('my-name').focus();return}
+  sfxTap();
+  pNum=2;
+  const c=$('join-codes');c.innerHTML='';
+  for(let i=0;i<4;i++){
+    const inp=document.createElement('input');inp.className='code-input';inp.maxLength=1;inp.inputMode='text';inp.autocapitalize='characters';
+    inp.addEventListener('input',e=>{e.target.value=e.target.value.toUpperCase().replace(/[^A-Z]/g,'');if(e.target.value&&i<3)c.children[i+1].focus()});
+    inp.addEventListener('keydown',e=>{if(e.key==='Backspace'&&!e.target.value&&i>0)c.children[i-1].focus()});
+    c.appendChild(inp);
+  }
+  show('s-join');setTimeout(()=>c.children[0].focus(),100);
+}
+async function doJoin(){
+  const code=Array.from($('join-codes').children).map(i=>i.value).join('').toUpperCase();
+  const err=$('join-err');
+  if(code.length<4){err.textContent='Enter the full code';return}
+  err.textContent='';roomCode=code;
+  const{data,error}=await sb.from('wkwb_rooms').select('data').eq('code',roomCode).single();
+  if(error||!data){err.textContent='Room not found';return}
+  room=data.data;
+  if(room.p2){err.textContent='Room is full';return}
+  if(room.phase!=='lobby'){err.textContent='Game already started';return}
+  await saveRoom({p2:myName});
+  $('p2w-sub').textContent=`${room.p1} is setting up questions...`;
+  show('s-p2-wait');
+  subscribe(r=>onRoomUpdate(r));
+}
+
+// ── Realtime handler ────────────────────────────
+function onRoomUpdate(r){
+  // Game started — begin self-answer phase
+  if(r.phase==='playing'&&myPhase==='self'&&myQIdx===0){
+    showSelfQ(0);
+  }
+  // Both fully done → reveal
+  if(r.phase==='playing'&&r.p1_self_done&&r.p2_self_done&&r.p1_guess_done&&r.p2_guess_done){
+    buildReveal();
+    return;
+  }
+  // I'm waiting, update status text
+  if(myPhase==='done'){
+    const partnerSelfDone=pNum===1?r.p2_self_done:r.p1_self_done;
+    const partnerGuessDone=pNum===1?r.p2_guess_done:r.p1_guess_done;
+    if(!partnerSelfDone) $('dw-status').textContent='Partner is answering about themselves...';
+    else if(!partnerGuessDone) $('dw-status').textContent='Partner is guessing your answers...';
+  }
+}
+
+// ── Setup ───────────────────────────────────────
+function goSetup(){questions=ALL_QUESTIONS.slice(0,10).map(q=>q);renderSetup();show('s-setup')}
+function renderSetup(){
+  $('q-count').textContent=questions.length;
+  const list=$('q-list');list.innerHTML='';
+  questions.forEach((q,i)=>{
+    const d=document.createElement('div');d.className='q-item';
+    d.innerHTML=`<input value="${esc(q)}" oninput="questions[${i}]=this.value"/><button class="q-del" onclick="questions.splice(${i},1);renderSetup()">×</button>`;
+    list.appendChild(d);
+  });
+}
+function addQ(){if(questions.length>=20)return;questions.push('');renderSetup();const items=$('q-list').querySelectorAll('.q-item input');items[items.length-1].focus()}
+function changeCount(d){
+  const n=questions.length+d;if(n<3||n>20)return;
+  if(d>0){const pool=ALL_QUESTIONS.filter(q=>!questions.includes(q));if(pool.length)questions.push(pool[Math.floor(Math.random()*pool.length)]);else questions.push('')}
+  else questions.pop();renderSetup();
+}
+function shuffleQs(){const pool=[...ALL_QUESTIONS];for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}questions=pool.slice(0,questions.length);renderSetup()}
+async function startGame(){
+  questions=questions.filter(q=>q.trim());
+  if(questions.length<3){alert('Need at least 3 questions');return}
+  myPhase='self';myQIdx=0;myGIdx=0;
+  await saveRoom({questions,phase:'playing',
+    p1_self:{},p2_self:{},p1_guess:{},p2_guess:{},
+    p1_self_done:false,p2_self_done:false,p1_guess_done:false,p2_guess_done:false});
+}
+
+// ── Self-answer (own pace) ──────────────────────
+function showSelfQ(idx){
+  if(!room.questions||idx>=room.questions.length){
+    // Done with self phase, move to guess phase
+    const doneKey=pNum===1?'p1_self_done':'p2_self_done';
+    saveRoom({[doneKey]:true});
+    myPhase='guess';myGIdx=0;
+    showGuessQ(0);
+    return;
+  }
+  myQIdx=idx;
+  show('s-self');
+  $('sq-num').textContent=`Q${idx+1}/${room.questions.length}`;
+  $('sq-bar').style.width=((idx+1)/room.questions.length*100)+'%';
+  $('sq-text').textContent=room.questions[idx];
+  const inp=$('sq-input');inp.value='';inp.disabled=false;
+  $('sq-btn').disabled=false;
+  // Last question button says "Finish" instead of "Next"
+  $('sq-btn').textContent=idx===room.questions.length-1?'Finish ✅':'Next →';
+  setTimeout(()=>inp.focus(),150);
+}
+async function submitSelf(){
+  const inp=$('sq-input');
+  const ans=inp.value.trim();
+  if(!ans){inp.focus();return}
+  sfxLockIn();
+  inp.disabled=true;$('sq-btn').disabled=true;
+  const key=pNum===1?'p1_self':'p2_self';
+  room[key][myQIdx]=ans;
+  await saveRoom({[key]:room[key]});
+  showSelfQ(myQIdx+1);
+}
+
+// ── Guess phase (own pace) ──────────────────────
+function showGuessQ(idx){
+  if(!room.questions||idx>=room.questions.length){
+    // Done with guess phase
+    const doneKey=pNum===1?'p1_guess_done':'p2_guess_done';
+    saveRoom({[doneKey]:true});
+    myPhase='done';
+    // Check if partner is also done
+    const partnerGuessDone=pNum===1?room.p2_guess_done:room.p1_guess_done;
+    const partnerSelfDone=pNum===1?room.p2_self_done:room.p1_self_done;
+    if(partnerSelfDone&&partnerGuessDone){
+      buildReveal();
+    } else {
+      show('s-done-waiting');
+    }
+    return;
+  }
+  myGIdx=idx;
+  show('s-guess');
+  const partner=pNum===1?room.p2:room.p1;
+  $('gq-num').textContent=`Q${idx+1}/${room.questions.length}`;
+  $('gq-bar').style.width=((idx+1)/room.questions.length*100)+'%';
+  $('gq-badge').textContent=`GUESS ${partner.toUpperCase()}'S ANSWER`;
+  $('gq-text').textContent=room.questions[idx];
+  const inp=$('gq-input');inp.value='';inp.disabled=false;
+  $('gq-btn').disabled=false;
+  $('gq-btn').textContent=idx===room.questions.length-1?'Finish ✅':'Next →';
+  setTimeout(()=>inp.focus(),150);
+}
+async function submitGuess(){
+  const inp=$('gq-input');
+  const ans=inp.value.trim();
+  if(!ans){inp.focus();return}
+  sfxLockIn();
+  inp.disabled=true;$('gq-btn').disabled=true;
+  const key=pNum===1?'p1_guess':'p2_guess';
+  room[key][myGIdx]=ans;
+  await saveRoom({[key]:room[key]});
+  showGuessQ(myGIdx+1);
+}
+
+// ── Reveal ──────────────────────────────────────
+async function buildReveal(){
+  await loadRoom();
+  show('s-reveal');
+  $('rev-sub').textContent=`${room.p1} & ${room.p2}`;
+  const c=$('rev-cards');c.innerHTML='';
+  judgments={};
+  room.questions.forEach((q,i)=>{
+    const p1self=room.p1_self[i]||'(no answer)',p2self=room.p2_self[i]||'(no answer)';
+    const p1guess=room.p1_guess[i]||'(no answer)',p2guess=room.p2_guess[i]||'(no answer)';
+    const m1=fuzzy(p1guess,p2self),m2=fuzzy(p2guess,p1self);
+    judgments[i]={p1:m1,p2:m2};
+    const card=document.createElement('div');card.className='rev-card';card.style.animationDelay=(i*.06)+'s';
+    card.innerHTML=`
+      <div class="rev-q">${esc(q)}</div>
+      <div class="rev-pair" style="border-color:rgba(255,45,120,.2)">
+        <div class="rev-pair-label" style="color:var(--pink)">${esc(room.p1)} guessed about ${esc(room.p2)}</div>
+        <div class="rev-row"><span class="rev-tag" style="color:var(--pink)">Guess:</span><span class="rev-val">${esc(p1guess)}</span></div>
+        <div class="rev-row"><span class="rev-tag" style="color:var(--purple)">Actual:</span><span class="rev-val">${esc(p2self)}</span></div>
+        ${m1?'<div class="badge yes">✅ Match!</div>':`<div class="badge no">❌ Not quite</div><div class="judge-row" id="j1-${i}"><button class="jbtn" onclick="jdg(${i},'p1',true)">Count it 👍</button><button class="jbtn" onclick="jdg(${i},'p1',false)">Nope 👎</button></div>`}
+      </div>
+      <div class="rev-pair" style="border-color:rgba(180,77,255,.2)">
+        <div class="rev-pair-label" style="color:var(--purple)">${esc(room.p2)} guessed about ${esc(room.p1)}</div>
+        <div class="rev-row"><span class="rev-tag" style="color:var(--purple)">Guess:</span><span class="rev-val">${esc(p2guess)}</span></div>
+        <div class="rev-row"><span class="rev-tag" style="color:var(--pink)">Actual:</span><span class="rev-val">${esc(p1self)}</span></div>
+        ${m2?'<div class="badge yes">✅ Match!</div>':`<div class="badge no">❌ Not quite</div><div class="judge-row" id="j2-${i}"><button class="jbtn" onclick="jdg(${i},'p2',true)">Count it 👍</button><button class="jbtn" onclick="jdg(${i},'p2',false)">Nope 👎</button></div>`}
+      </div>`;
+    c.appendChild(card);
+  });
+}
+function jdg(i,who,ok){
+  if(ok)sfxMatch();else sfxMiss();
+  judgments[i][who]=ok;const pre=who==='p1'?'j1':'j2';const row=$(pre+'-'+i);if(!row)return;
+  row.querySelectorAll('.jbtn').forEach(b=>b.className='jbtn');
+  if(ok)row.children[0].classList.add('sel-y');else row.children[1].classList.add('sel-n');
+  const badge=row.closest('.rev-pair').querySelector('.badge');
+  badge.className=ok?'badge yes':'badge no';badge.textContent=ok?'✅ Match!':'❌ Not quite';
+}
+
+// ── Score ────────────────────────────────────────
+function showScore(){
+  show('s-score');sfxFanfare();launchConfetti();
+  const total=room.questions.length;let p1Score=0,p2Score=0;
+  for(let i=0;i<total;i++){if(judgments[i]?.p1)p1Score++;if(judgments[i]?.p2)p2Score++}
+  const combined=p1Score+p2Score,max=total*2;
+  $('sc-num').textContent=combined;$('sc-of').textContent='/'+max;
+  $('sc-p1-name').textContent=room.p1;$('sc-p1-val').textContent=p1Score+'/'+total;
+  $('sc-p2-name').textContent=room.p2;$('sc-p2-val').textContent=p2Score+'/'+total;
+  const pct=combined/max;let msg,sub;
+  if(pct===1){msg='PERFECT! 💯';sub="Soulmates confirmed.";}
+  else if(pct>=.7){msg='AMAZING! 🔥';sub="You really know each other!";}
+  else if(pct>=.5){msg='NOT BAD! 😏';sub="Room for improvement...";}
+  else if(pct>=.3){msg='UH OH... 😬';sub="Do you even talk?";}
+  else{msg='STRANGERS?! 💀';sub="Time for a long conversation.";}
+  $('sc-msg').textContent=msg;$('sc-sub').textContent=sub;
+  const mc=$('sc-mismatches');mc.innerHTML='';let hasMM=false;
+  for(let i=0;i<total;i++){const j=judgments[i];if(!j.p1||!j.p2){
+    if(!hasMM){const t=document.createElement('p');t.style.cssText='font-family:"Press Start 2P",monospace;font-size:9px;color:var(--orange);margin:8px 0;text-shadow:0 0 7px var(--orange)';t.textContent='😂 MISMATCHES';mc.appendChild(t);hasMM=true}
+    const c=document.createElement('div');c.className='rev-card';c.style.borderColor='rgba(255,107,0,.3)';
+    let h=`<div class="rev-q">${esc(room.questions[i])}</div>`;
+    if(!j.p1)h+=`<div style="font-size:12px;margin:2px 0"><span style="color:var(--pink);font-weight:800">${esc(room.p1)}</span> guessed "${esc(room.p1_guess[i])}" — actual: "${esc(room.p2_self[i])}"</div>`;
+    if(!j.p2)h+=`<div style="font-size:12px;margin:2px 0"><span style="color:var(--purple);font-weight:800">${esc(room.p2)}</span> guessed "${esc(room.p2_guess[i])}" — actual: "${esc(room.p1_self[i])}"</div>`;
+    c.innerHTML=h;mc.appendChild(c);
+  }}
+}
+function launchConfetti(){const c=$('confetti-box');c.innerHTML='';const colors=['#FF2D78','#FFE600','#B44DFF','#00F5FF','#39FF14','#FF6B00'];for(let i=0;i<50;i++){const p=document.createElement('div');p.className='confetti-piece';p.style.left=Math.random()*100+'%';p.style.background=colors[Math.floor(Math.random()*colors.length)];p.style.width=(6+Math.random()*8)+'px';p.style.height=(6+Math.random()*8)+'px';p.style.borderRadius=Math.random()>.5?'50%':'2px';p.style.animationDuration=(2+Math.random()*2)+'s';p.style.animationDelay=(Math.random()*1.5)+'s';c.appendChild(p)}setTimeout(()=>c.innerHTML='',5000)}
+function leaveRoom(){unsub();roomCode=null;room=null;show('s-home')}
+function resetAll(){unsub();roomCode=null;room=null;judgments={};myPhase='self';myQIdx=0;myGIdx=0;show('s-home')}
+// Alias for back links
+function showScreen(id){show(id)}
+</script>
+</body>
+</html>

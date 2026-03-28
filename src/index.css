@@ -1,0 +1,138 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #05050f;
+  --color-pink: #FF2D78;
+  --color-yellow: #FFE600;
+  --color-cyan: #00F5FF;
+  --color-lime: #39FF14;
+  --color-orange: #FF6B00;
+  --color-purple: #B44DFF;
+  --font-heading: "Press Start 2P", monospace;
+  --font-body: "Nunito", sans-serif;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  background-color: #05050f;
+  color: white;
+  font-family: "Nunito", sans-serif;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+/* Scanline CRT overlay */
+.scanlines::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+}
+
+/* Neon glow utilities */
+.glow-pink {
+  text-shadow: 0 0 7px #FF2D78, 0 0 20px #FF2D78, 0 0 40px #FF2D78;
+}
+.glow-cyan {
+  text-shadow: 0 0 7px #00F5FF, 0 0 20px #00F5FF, 0 0 40px #00F5FF;
+}
+.glow-yellow {
+  text-shadow: 0 0 7px #FFE600, 0 0 20px #FFE600, 0 0 40px #FFE600;
+}
+.glow-lime {
+  text-shadow: 0 0 7px #39FF14, 0 0 20px #39FF14, 0 0 40px #39FF14;
+}
+.glow-orange {
+  text-shadow: 0 0 7px #FF6B00, 0 0 20px #FF6B00, 0 0 40px #FF6B00;
+}
+.glow-purple {
+  text-shadow: 0 0 7px #B44DFF, 0 0 20px #B44DFF, 0 0 40px #B44DFF;
+}
+
+.box-glow-pink {
+  box-shadow: 0 0 10px #FF2D78, 0 0 30px #FF2D78;
+}
+.box-glow-cyan {
+  box-shadow: 0 0 10px #00F5FF, 0 0 30px #00F5FF;
+}
+.box-glow-yellow {
+  box-shadow: 0 0 10px #FFE600, 0 0 30px #FFE600;
+}
+.box-glow-lime {
+  box-shadow: 0 0 10px #39FF14, 0 0 30px #39FF14;
+}
+.box-glow-orange {
+  box-shadow: 0 0 10px #FF6B00, 0 0 30px #FF6B00;
+}
+.box-glow-purple {
+  box-shadow: 0 0 10px #B44DFF, 0 0 30px #B44DFF;
+}
+
+/* Card flip animation */
+.card-inner {
+  transition: transform 0.5s;
+  transform-style: preserve-3d;
+}
+.card-inner.flipped {
+  transform: rotateY(180deg);
+}
+.card-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.card-back {
+  transform: rotateY(180deg);
+}
+
+/* Neon button base */
+.neon-btn {
+  font-family: "Nunito", sans-serif;
+  font-weight: 700;
+  min-height: 48px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: 2px solid;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+  user-select: none;
+}
+.neon-btn:active {
+  transform: translateY(2px);
+  box-shadow: none !important;
+}
+
+/* Page transition */
+.page-enter {
+  animation: fadeSlideIn 0.15s ease-out;
+}
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Pulse animation for start game */
+@keyframes neonPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+.pulse-glow {
+  animation: neonPulse 1.5s ease-in-out infinite;
+}
