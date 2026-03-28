@@ -17,8 +17,8 @@ body{display:flex;justify-content:center}
 .screen{display:none;flex-direction:column;align-items:center;flex:1;animation:fadeUp .15s ease-out}
 .screen.active{display:flex}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-h1{font-family:'Press Start 2P',monospace;font-size:16px;text-align:center;line-height:1.8;color:var(--pink);text-shadow:0 0 7px var(--pink),0 0 20px var(--pink)}
-h2{font-family:'Press Start 2P',monospace;font-size:12px;text-align:center;line-height:1.8;color:var(--pink);text-shadow:0 0 7px var(--pink),0 0 20px var(--pink)}
+h1{font-family:'Press Start 2P',monospace;font-size:16px;text-align:center;line-height:1.8;color:var(--pink);text-shadow:0 0 4px var(--pink)}
+h2{font-family:'Press Start 2P',monospace;font-size:12px;text-align:center;line-height:1.8;color:var(--pink);text-shadow:0 0 4px var(--pink)}
 .sub{color:var(--muted);font-size:14px;text-align:center;margin-top:6px}
 .emoji-big{font-size:44px;margin:14px 0}
 .btn{width:100%;max-width:320px;min-height:48px;border:2px solid;border-radius:var(--radius);font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:transform .1s,box-shadow .1s;padding:12px 20px;background:var(--bg);user-select:none;display:inline-flex;align-items:center;gap:8px;justify-content:center}
@@ -107,7 +107,7 @@ label{font-size:12px;color:var(--muted);margin-bottom:4px;display:block;font-wei
 @keyframes sg{0%{box-shadow:0 0 15px rgba(255,45,120,.3)}100%{box-shadow:0 0 40px rgba(255,45,120,.5)}}
 .compat-num{font-family:'Press Start 2P',monospace;font-size:28px;color:var(--pink);text-shadow:0 0 8px var(--pink)}
 .compat-pct{font-family:'Press Start 2P',monospace;font-size:10px;color:var(--muted)}
-.score-label{font-family:'Press Start 2P',monospace;font-size:11px;color:var(--yellow);text-shadow:0 0 7px var(--yellow)}
+.score-label{font-family:'Press Start 2P',monospace;font-size:11px;color:var(--yellow);text-shadow:0 0 4px var(--yellow)}
 .stat-row{display:flex;gap:10px;width:100%;max-width:320px;margin:8px 0}
 .stat-box{flex:1;text-align:center;padding:10px;border-radius:var(--radius);border:2px solid #1a1a2e}
 .stat-num{font-size:22px;font-weight:900}
@@ -214,7 +214,7 @@ label{font-size:12px;color:var(--muted);margin-bottom:4px;display:block;font-wei
 <!-- DONE WAITING -->
 <div id="s-done" class="screen" style="justify-content:center">
   <span class="emoji-big">✅</span>
-  <h2 style="color:var(--lime);text-shadow:0 0 7px var(--lime),0 0 20px var(--lime)">ALL SWIPED!</h2>
+  <h2 style="color:var(--lime);text-shadow:0 0 4px var(--lime)">ALL SWIPED!</h2>
   <p class="sub">Waiting for partner to finish...</p>
   <div style="height:20px"></div>
   <div class="wait-row"><div class="dot-pulse"><span></span><span></span><span></span></div><span>Partner is still swiping</span></div>
@@ -271,6 +271,10 @@ function sfxNot(){const c=ac(),o=c.createOscillator(),g=c.createGain();o.connect
 function sfxMatch(){const c=ac();[784,1047,1318].forEach((f,i)=>{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='square';o.frequency.setValueAtTime(f,c.currentTime+i*.07);g.gain.setValueAtTime(0,c.currentTime+i*.07);g.gain.linearRampToValueAtTime(.1,c.currentTime+i*.07+.02);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+i*.07+.12);o.start(c.currentTime+i*.07);o.stop(c.currentTime+i*.07+.12)})}
 function sfxClash(){const c=ac(),o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='sawtooth';o.frequency.setValueAtTime(300,c.currentTime);o.frequency.exponentialRampToValueAtTime(150,c.currentTime+.15);g.gain.setValueAtTime(.08,c.currentTime);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+.2);o.start(c.currentTime);o.stop(c.currentTime+.2)}
 function sfxFanfare(){const c=ac();[523,659,784,1047,1318].forEach((f,i)=>{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='square';o.frequency.setValueAtTime(f,c.currentTime+i*.08);g.gain.setValueAtTime(0,c.currentTime+i*.08);g.gain.linearRampToValueAtTime(.12,c.currentTime+i*.08+.02);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+i*.08+.12);o.start(c.currentTime+i*.08);o.stop(c.currentTime+i*.08+.12)})}
+function sfxSelect(){const c=ac();[660,990].forEach((f,i)=>{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='square';o.frequency.setValueAtTime(f,c.currentTime+i*.07);g.gain.setValueAtTime(0,c.currentTime+i*.07);g.gain.linearRampToValueAtTime(.1,c.currentTime+i*.07+.02);g.gain.exponentialRampToValueAtTime(.01,c.currentTime+i*.07+.12);o.start(c.currentTime+i*.07);o.stop(c.currentTime+i*.07+.12)})}
+let _lm=null,_lt=null;
+function lobbyMusicStart(){lobbyMusicStop();const c=ac();const mel=[392,0,523,0,659,0,523,0,440,0,523,0,587,0,523,0,392,0,494,0,587,0,659,0,523,0,440,0,392,0,0,0];const bas=[196,196,196,196,220,220,220,220,196,196,196,196,262,262,196,196,196,196,196,196,220,220,220,220,262,262,220,220,196,196,196,196];const mg=c.createGain();mg.gain.setValueAtTime(.06,c.currentTime);mg.connect(c.destination);const sd=.18;let run=true;function bar(){if(!run)return;const n=c.currentTime;for(let i=0;i<mel.length;i++){const t=n+i*sd;if(mel[i]>0){const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(mg);o.type='square';o.frequency.setValueAtTime(mel[i],t);g.gain.setValueAtTime(.3,t);g.gain.exponentialRampToValueAtTime(.01,t+sd*.9);o.start(t);o.stop(t+sd*.9)}if(bas[i]>0){const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(mg);o.type='triangle';o.frequency.setValueAtTime(bas[i],t);g.gain.setValueAtTime(.2,t);g.gain.exponentialRampToValueAtTime(.01,t+sd*.8);o.start(t);o.stop(t+sd*.8)}}_lt=setTimeout(bar,mel.length*sd*1000-50)}bar();_lm={stop(){run=false;if(_lt)clearTimeout(_lt);mg.gain.exponentialRampToValueAtTime(.001,c.currentTime+.3);setTimeout(()=>{try{mg.disconnect()}catch{}},400)}}}
+function lobbyMusicStop(){if(_lm){_lm.stop();_lm=null}if(_lt){clearTimeout(_lt);_lt=null}}
 
 const ITEMS={
   "Places 📍":[
@@ -341,7 +345,7 @@ async function doCreate(){
   await sb.from('hon_rooms').insert({code:roomCode,data:room});
   $('code-show').innerHTML=roomCode.split('').map(c=>`<div class="code-char">${c}</div>`).join('');
   $('lb-p1').textContent=myName+' (you)';
-  show('s-lobby');
+  show('s-lobby');lobbyMusicStart();
   subscribe(r=>{
     if(r.p2&&r.phase==='lobby'){
       const s=$('lb-p2-slot');s.classList.add('on');
@@ -377,13 +381,13 @@ async function doJoin(){
   if(room.phase!=='lobby'){err.textContent='Game already started';return}
   await saveRoom({p2:myName});
   $('p2w-sub').textContent=`${room.p1} is picking categories...`;
-  show('s-p2-wait');
+  show('s-p2-wait');lobbyMusicStart();
   subscribe(r=>onUpdate(r));
 }
 
 function onUpdate(r){
   if(r.phase==='playing'&&myIdx===0&&!r[pNum===1?'p1_done':'p2_done']){
-    gameItems=r.items;showCard(0);
+    lobbyMusicStop();gameItems=r.items;showCard(0);
   }
   if(r.phase==='playing'&&r.p1_done&&r.p2_done){buildReveal();return}
   if(r.phase==='playing'&&r[pNum===1?'p1_done':'p2_done']&&!r[pNum===1?'p2_done':'p1_done']){
@@ -392,7 +396,7 @@ function onUpdate(r){
 }
 
 // ── Setup ───────────────────────────────────────
-function goSetup(){
+function goSetup(){lobbyMusicStop();
   selectedCats=new Set(Object.keys(ITEMS));
   itemCount=15;
   renderSetup();show('s-setup');
@@ -566,7 +570,7 @@ function showScore(){
   const clashItems=revealData.filter(d=>!d.match);
   if(clashItems.length){
     const t=document.createElement('p');
-    t.style.cssText='font-family:"Press Start 2P",monospace;font-size:9px;color:var(--orange);margin:6px 0;text-shadow:0 0 7px var(--orange)';
+    t.style.cssText='font-family:"Press Start 2P",monospace;font-size:9px;color:var(--orange);margin:6px 0;text-shadow:0 0 4px var(--orange)';
     t.textContent='💥 WHERE YOU CLASHED';cc.appendChild(t);
     clashItems.forEach(d=>{
       const el=document.createElement('div');

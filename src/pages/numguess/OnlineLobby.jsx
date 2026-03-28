@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useSocket } from "../../contexts/SocketContext.jsx";
+import { startLobbyMusic, stopLobbyMusic } from "../../utils/sound.js";
 
 export default function NumGuessOnlineLobby() {
   const { socket } = useSocket();
@@ -10,9 +11,15 @@ export default function NumGuessOnlineLobby() {
   const [waiting, setWaiting] = useState(true);
 
   useEffect(() => {
+    startLobbyMusic();
+    return () => stopLobbyMusic();
+  }, []);
+
+  useEffect(() => {
     if (!socket || !code) return;
 
     function onGameStart() {
+      stopLobbyMusic();
       setWaiting(false);
       navigate("/numguess/online/play", { state: { code, role: "p1" } });
     }

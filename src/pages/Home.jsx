@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { playTap, playFlipOpen, playSelect } from "../utils/sound.js";
 
 const categories = [
   {
@@ -79,13 +80,13 @@ function GameCard({ game }) {
 
   if (game.external) {
     return (
-      <a href={game.path} className="no-underline">
+      <a href={game.path} className="no-underline" onClick={playSelect}>
         {inner}
       </a>
     );
   }
   return (
-    <Link to={game.path} className="no-underline">
+    <Link to={game.path} className="no-underline" onClick={playSelect}>
       {inner}
     </Link>
   );
@@ -95,6 +96,7 @@ export default function Home() {
   const [openCat, setOpenCat] = useState(null);
 
   function toggleCat(name) {
+    playFlipOpen();
     setOpenCat((prev) => (prev === name ? null : name));
   }
 

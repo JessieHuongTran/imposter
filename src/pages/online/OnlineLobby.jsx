@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useSocket } from "../../contexts/SocketContext.jsx";
+import { startLobbyMusic, stopLobbyMusic } from "../../utils/sound.js";
 
 export default function OnlineLobby() {
   const { socket } = useSocket();
@@ -14,6 +15,11 @@ export default function OnlineLobby() {
   const [maxPlayers, setMaxPlayers] = useState(0);
 
   useEffect(() => {
+    startLobbyMusic();
+    return () => stopLobbyMusic();
+  }, []);
+
+  useEffect(() => {
     if (!socket || !code) return;
 
     function onLobbyUpdate(data) {
@@ -24,6 +30,7 @@ export default function OnlineLobby() {
     }
 
     function onCardDealt(cardData) {
+      stopLobbyMusic();
       navigate("/imposter/online/card", { state: { code, ...cardData } });
     }
 

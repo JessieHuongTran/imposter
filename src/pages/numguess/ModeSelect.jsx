@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
+import { playTap } from "../../utils/sound.js";
 
 export default function NumGuessModeSelect() {
   const navigate = useNavigate();
@@ -16,7 +17,7 @@ export default function NumGuessModeSelect() {
 
       <div className="flex flex-col gap-5 w-full max-w-sm">
         <button
-          onClick={() => navigate("/numguess/local/setup")}
+          onClick={() => { playTap(); navigate("/numguess/local/setup"); }}
           className="neon-btn bg-bg text-yellow border-yellow box-glow-yellow flex items-center gap-4 text-left w-full py-5 px-5"
         >
           <span className="text-3xl">🏠</span>
@@ -29,7 +30,7 @@ export default function NumGuessModeSelect() {
         </button>
 
         <button
-          onClick={() => navigate("/numguess/online")}
+          onClick={() => { playTap(); navigate("/numguess/online"); }}
           className="neon-btn bg-bg text-cyan border-cyan box-glow-cyan flex items-center gap-4 text-left w-full py-5 px-5"
         >
           <span className="text-3xl">🌐</span>

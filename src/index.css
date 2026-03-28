@@ -41,24 +41,24 @@ body {
   );
 }
 
-/* Neon glow utilities */
+/* Neon glow utilities (reduced 50% for readability) */
 .glow-pink {
-  text-shadow: 0 0 7px #FF2D78, 0 0 20px #FF2D78, 0 0 40px #FF2D78;
+  text-shadow: 0 0 4px rgba(255,45,120,.5), 0 0 12px rgba(255,45,120,.3);
 }
 .glow-cyan {
-  text-shadow: 0 0 7px #00F5FF, 0 0 20px #00F5FF, 0 0 40px #00F5FF;
+  text-shadow: 0 0 4px rgba(0,245,255,.5), 0 0 12px rgba(0,245,255,.3);
 }
 .glow-yellow {
-  text-shadow: 0 0 7px #FFE600, 0 0 20px #FFE600, 0 0 40px #FFE600;
+  text-shadow: 0 0 4px rgba(255,230,0,.5), 0 0 12px rgba(255,230,0,.3);
 }
 .glow-lime {
-  text-shadow: 0 0 7px #39FF14, 0 0 20px #39FF14, 0 0 40px #39FF14;
+  text-shadow: 0 0 4px rgba(57,255,20,.5), 0 0 12px rgba(57,255,20,.3);
 }
 .glow-orange {
-  text-shadow: 0 0 7px #FF6B00, 0 0 20px #FF6B00, 0 0 40px #FF6B00;
+  text-shadow: 0 0 4px rgba(255,107,0,.5), 0 0 12px rgba(255,107,0,.3);
 }
 .glow-purple {
-  text-shadow: 0 0 7px #B44DFF, 0 0 20px #B44DFF, 0 0 40px #B44DFF;
+  text-shadow: 0 0 4px rgba(180,77,255,.5), 0 0 12px rgba(180,77,255,.3);
 }
 
 .box-glow-pink {
