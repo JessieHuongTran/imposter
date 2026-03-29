@@ -34,17 +34,39 @@ export function SocketProvider({ children }) {
 
   // Returns a promise that resolves with the connected socket
   const ensureConnected = useCallback(() => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const socket = socketRef.current;
-      if (!socket) return;
+      if (!socket) {
+        reject(new Error("Socket not initialized"));
+        return;
+      }
 
       if (socket.connected) {
         resolve(socket);
         return;
       }
 
+      const timeout = setTimeout(() => {
+        socket.off("connect", onConnect);
+        socket.off("connect_error", onError);
+        reject(new Error("Connection timed out"));
+      }, 8000);
+
+      function onConnect() {
+        clearTimeout(timeout);
+        socket.off("connect_error", onError);
+        resolve(socket);
+      }
+
+      function onError(err) {
+        clearTimeout(timeout);
+        socket.off("connect", onConnect);
+        reject(new Error("Connection failed: " + err.message));
+      }
+
+      socket.once("connect", onConnect);
+      socket.once("connect_error", onError);
       socket.connect();
-      socket.once("connect", () => resolve(socket));
     });
   }, []);
 

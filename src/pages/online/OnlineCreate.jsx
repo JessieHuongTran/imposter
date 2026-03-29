@@ -50,8 +50,8 @@ export default function OnlineCreate() {
           setCreating(false);
         }
       });
-    } catch {
-      setError("Could not connect to server");
+    } catch (err) {
+      setError(err.message || "Could not connect to server");
       setCreating(false);
     }
   }

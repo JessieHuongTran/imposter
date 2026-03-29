@@ -54,8 +54,8 @@ export default function OnlineJoin() {
           setJoining(false);
         }
       });
-    } catch {
-      setError("Could not connect to server");
+    } catch (err) {
+      setError(err.message || "Could not connect to server");
       setJoining(false);
     }
   }
