@@ -1,11 +1,11 @@
 import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useSocket } from "../../contexts/SocketContext.jsx";
+import { useSB, generateId } from "../../contexts/SupabaseContext.jsx";
 import { playFlipOpen } from "../../utils/sound.js";
 
 export default function NumGuessOnlineJoin() {
   const navigate = useNavigate();
-  const { ensureConnected } = useSocket();
+  const sb = useSB();
   const [code, setCode] = useState(["", "", "", ""]);
   const [secretInput, setSecretInput] = useState("");
   const [error, setError] = useState("");
@@ -45,17 +45,55 @@ export default function NumGuessOnlineJoin() {
     playFlipOpen();
 
     try {
-      const socket = await ensureConnected();
-      socket.emit("ng_join_room", { code: roomCode, secretNumber: num }, (res) => {
-        if (res.success) {
-          navigate("/numguess/online/play", { state: { code: roomCode, role: "p2" } });
-        } else {
-          setError(res.error || "Could not join");
-          setJoining(false);
-        }
-      });
+      const { data: room, error: fetchError } = await sb
+        .from("numguess_rooms")
+        .select("*")
+        .eq("code", roomCode)
+        .single();
+
+      if (fetchError || !room) {
+        setError("Room not found");
+        setJoining(false);
+        return;
+      }
+
+      const roomData = room.data;
+
+      if (roomData.players.p2) {
+        setError("Room is full");
+        setJoining(false);
+        return;
+      }
+      if (roomData.status !== "waiting") {
+        setError("Game already started");
+        setJoining(false);
+        return;
+      }
+
+      const playerId = generateId();
+      const updatedData = {
+        ...roomData,
+        players: {
+          ...roomData.players,
+          p2: { id: playerId, secretNumber: num },
+        },
+        status: "playing",
+      };
+
+      const { error: updateError } = await sb
+        .from("numguess_rooms")
+        .update({ data: updatedData })
+        .eq("code", roomCode);
+
+      if (updateError) {
+        setError("Failed to join room");
+        setJoining(false);
+        return;
+      }
+
+      navigate("/numguess/online/play", { state: { code: roomCode, role: "p2", playerId } });
     } catch (err) {
-      setError(err.message || "Could not connect to server");
+      setError(err.message || "Could not join");
       setJoining(false);
     }
   }
@@ -70,7 +108,6 @@ export default function NumGuessOnlineJoin() {
         JOIN GAME
       </h1>
 
-      {/* Room code */}
       <p className="text-gray-400 font-body text-sm mb-3">Room Code</p>
       <div className="flex gap-3 mb-8">
         {code.map((char, i) => (
@@ -89,7 +126,6 @@ export default function NumGuessOnlineJoin() {
         ))}
       </div>
 
-      {/* Secret number */}
       <p className="text-gray-300 font-body text-base mb-2">Pick your secret number</p>
       <p className="text-gray-600 font-body text-xs mb-4">1 – 100</p>
 

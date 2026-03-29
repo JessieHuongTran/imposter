@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import categories from "../../data/categories.js";
-import { useSocket } from "../../contexts/SocketContext.jsx";
+import { useSB, generateId, generateCode } from "../../contexts/SupabaseContext.jsx";
 
 const categoryNames = Object.keys(categories);
 
@@ -23,7 +23,7 @@ export default function OnlineCreate() {
   const navigate = useNavigate();
   const location = useLocation();
   const preselectedCategory = location.state?.category;
-  const { ensureConnected } = useSocket();
+  const sb = useSB();
   const [category, setCategory] = useState(preselectedCategory || null);
   const [maxPlayers, setMaxPlayers] = useState(4);
   const [hostName, setHostName] = useState("");
@@ -38,20 +38,33 @@ export default function OnlineCreate() {
     setError("");
 
     try {
-      const socket = await ensureConnected();
-      socket.emit("create_room", { category, maxPlayers }, (res) => {
-        if (res.success) {
-          socket.emit("update_host_name", { code: res.code, name: hostName.trim() });
-          navigate("/imposter/online/lobby", {
-            state: { code: res.code, isHost: true, category, hostName: hostName.trim() },
-          });
-        } else {
-          setError("Failed to create room");
-          setCreating(false);
-        }
+      const playerId = generateId();
+      const code = generateCode();
+
+      const roomData = {
+        players: [{ id: playerId, name: hostName.trim() }],
+        category,
+        maxPlayers,
+        status: "lobby",
+        gameData: null,
+        viewedCount: 0,
+      };
+
+      const { error: insertError } = await sb
+        .from("imposter_rooms")
+        .insert({ code, data: roomData });
+
+      if (insertError) {
+        setError("Failed to create room: " + insertError.message);
+        setCreating(false);
+        return;
+      }
+
+      navigate("/imposter/online/lobby", {
+        state: { code, isHost: true, playerId },
       });
     } catch (err) {
-      setError(err.message || "Could not connect to server");
+      setError(err.message || "Could not create room");
       setCreating(false);
     }
   }

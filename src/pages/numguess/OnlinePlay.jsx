@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useSocket } from "../../contexts/SocketContext.jsx";
+import { useSB } from "../../contexts/SupabaseContext.jsx";
 import { playFlipOpen, playFlipClose, playStartGame } from "../../utils/sound.js";
 
 export default function NumGuessOnlinePlay() {
-  const { socket } = useSocket();
+  const sb = useSB();
   const navigate = useNavigate();
   const location = useLocation();
   const { code, role } = location.state || {};
@@ -12,46 +12,80 @@ export default function NumGuessOnlinePlay() {
   const [currentTurn, setCurrentTurn] = useState("p1");
   const [guessInput, setGuessInput] = useState("");
   const [guesses, setGuesses] = useState([]);
-  const [waitingForResult, setWaitingForResult] = useState(false);
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const subRef = useRef(null);
 
+  // Fetch initial state
   useEffect(() => {
-    if (!socket || !code) return;
+    if (!sb || !code) return;
 
-    function onGuessResult(data) {
-      if (data.result === "correct") {
-        playStartGame();
-      } else {
-        playFlipClose();
-      }
-      setGuesses((prev) => [...prev, data]);
-      setWaitingForResult(false);
-      setGuessInput("");
-
-      if (data.result !== "correct") {
-        setCurrentTurn(data.guesser === "p1" ? "p2" : "p1");
+    async function fetchRoom() {
+      const { data: room } = await sb
+        .from("numguess_rooms")
+        .select("*")
+        .eq("code", code)
+        .single();
+      if (room) {
+        applyState(room.data);
       }
     }
 
-    function onGameOver(data) {
-      navigate("/numguess/online/result", {
-        state: { ...data, myRole: role, code },
-      });
+    function applyState(data) {
+      setGuesses(data.guesses || []);
+      setCurrentTurn(data.currentTurn || "p1");
+      setSubmitting(false);
+
+      if (data.status === "finished") {
+        navigate("/numguess/online/result", {
+          state: {
+            winner: data.winner,
+            p1Number: data.players.p1.secretNumber,
+            p2Number: data.players.p2.secretNumber,
+            allGuesses: data.guesses,
+            myRole: role,
+            code,
+          },
+        });
+      }
     }
 
-    socket.on("ng_guess_result", onGuessResult);
-    socket.on("ng_game_over", onGameOver);
+    fetchRoom();
+
+    const channel = sb
+      .channel(`ng-play-${code}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "numguess_rooms",
+          filter: `code=eq.${code}`,
+        },
+        (payload) => {
+          const data = payload.new.data;
+          // Play sound for new guesses
+          const prevLen = guesses.length;
+          if (data.guesses && data.guesses.length > prevLen) {
+            const latest = data.guesses[data.guesses.length - 1];
+            if (latest.result === "correct") playStartGame();
+            else playFlipClose();
+          }
+          applyState(data);
+        }
+      )
+      .subscribe();
+
+    subRef.current = channel;
 
     return () => {
-      socket.off("ng_guess_result", onGuessResult);
-      socket.off("ng_game_over", onGameOver);
+      if (subRef.current) sb.removeChannel(subRef.current);
     };
-  }, [socket, code, role, navigate]);
+  }, [sb, code, role, navigate]);
 
   if (!code || !role) return null;
 
   const isMyTurn = currentTurn === role;
-  const opponent = role === "p1" ? "p2" : "p1";
   const turnColor = currentTurn === "p1"
     ? { text: "text-cyan", glow: "glow-cyan", border: "border-cyan", boxGlow: "box-glow-cyan", label: "P1" }
     : { text: "text-pink", glow: "glow-pink", border: "border-pink", boxGlow: "box-glow-pink", label: "P2" };
@@ -59,19 +93,62 @@ export default function NumGuessOnlinePlay() {
   const p1Guesses = guesses.filter((g) => g.guesser === "p1");
   const p2Guesses = guesses.filter((g) => g.guesser === "p2");
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const value = parseInt(guessInput, 10);
     if (isNaN(value) || value < 1 || value > 100) {
       return setError("Enter a number between 1 and 100");
     }
     setError("");
+    setSubmitting(true);
     playFlipOpen();
-    setWaitingForResult(true);
-    socket.emit("ng_submit_guess", { code, value });
+
+    try {
+      // Fetch latest room state to get opponent's secret
+      const { data: room } = await sb
+        .from("numguess_rooms")
+        .select("*")
+        .eq("code", code)
+        .single();
+
+      if (!room) return;
+      const data = room.data;
+
+      const opponent = role === "p1" ? "p2" : "p1";
+      const targetNumber = data.players[opponent].secretNumber;
+
+      let result;
+      if (value === targetNumber) result = "correct";
+      else if (targetNumber > value) result = "higher";
+      else result = "lower";
+
+      const entry = { guesser: role, value, result };
+      const newGuesses = [...data.guesses, entry];
+
+      const patch = {
+        ...data,
+        guesses: newGuesses,
+        currentTurn: result === "correct" ? data.currentTurn : opponent,
+      };
+
+      if (result === "correct") {
+        patch.status = "finished";
+        patch.winner = role;
+      }
+
+      await sb
+        .from("numguess_rooms")
+        .update({ data: patch })
+        .eq("code", code);
+
+      setGuessInput("");
+    } catch (err) {
+      setError("Failed to submit guess");
+      setSubmitting(false);
+    }
   }
 
   // Waiting for opponent's turn
-  if (!isMyTurn && !waitingForResult) {
+  if (!isMyTurn && !submitting) {
     return (
       <div className="page-enter flex flex-col items-center px-5 py-8 min-h-dvh">
         <h1 className="font-heading text-pink text-sm glow-pink mb-4 text-center leading-relaxed">
@@ -94,8 +171,8 @@ export default function NumGuessOnlinePlay() {
     );
   }
 
-  // Waiting for server result
-  if (waitingForResult) {
+  // Submitting
+  if (submitting) {
     return (
       <div className="page-enter flex flex-col items-center justify-center min-h-dvh px-5 gap-6">
         <h1 className="font-heading text-pink text-sm glow-pink text-center leading-relaxed">
@@ -105,12 +182,11 @@ export default function NumGuessOnlinePlay() {
           You guessed <span className="text-yellow font-bold">{guessInput}</span>
         </p>
         <div className="w-6 h-6 border-2 border-yellow border-t-transparent rounded-full animate-spin" />
-        <p className="text-gray-400 font-body text-sm">Checking...</p>
       </div>
     );
   }
 
-  // My turn to guess
+  // My turn
   return (
     <div className="page-enter flex flex-col items-center px-5 py-8 min-h-dvh">
       <h1 className="font-heading text-pink text-sm glow-pink mb-4 text-center leading-relaxed">

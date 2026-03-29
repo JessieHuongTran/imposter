@@ -1,14 +1,14 @@
-import { useState, useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
-import { useSocket } from "../../contexts/SocketContext.jsx";
+import { useSB } from "../../contexts/SupabaseContext.jsx";
 import { startLobbyMusic, stopLobbyMusic } from "../../utils/sound.js";
 
 export default function NumGuessOnlineLobby() {
-  const { socket } = useSocket();
+  const sb = useSB();
   const navigate = useNavigate();
   const location = useLocation();
-  const { code, isHost } = location.state || {};
-  const [waiting, setWaiting] = useState(true);
+  const { code, isHost, playerId } = location.state || {};
+  const subRef = useRef(null);
 
   useEffect(() => {
     startLobbyMusic();
@@ -16,20 +16,36 @@ export default function NumGuessOnlineLobby() {
   }, []);
 
   useEffect(() => {
-    if (!socket || !code) return;
+    if (!sb || !code) return;
 
-    function onGameStart() {
-      stopLobbyMusic();
-      setWaiting(false);
-      navigate("/numguess/online/play", { state: { code, role: "p1" } });
-    }
+    const channel = sb
+      .channel(`ng-lobby-${code}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "numguess_rooms",
+          filter: `code=eq.${code}`,
+        },
+        (payload) => {
+          const data = payload.new.data;
+          if (data.status === "playing") {
+            stopLobbyMusic();
+            navigate("/numguess/online/play", {
+              state: { code, role: "p1", playerId },
+            });
+          }
+        }
+      )
+      .subscribe();
 
-    socket.on("ng_game_start", onGameStart);
+    subRef.current = channel;
 
     return () => {
-      socket.off("ng_game_start", onGameStart);
+      if (subRef.current) sb.removeChannel(subRef.current);
     };
-  }, [socket, code, navigate]);
+  }, [sb, code, navigate, playerId]);
 
   if (!code) {
     return (
@@ -48,7 +64,6 @@ export default function NumGuessOnlineLobby() {
         WAITING FOR OPPONENT
       </h1>
 
-      {/* Room code */}
       <div className="flex gap-2">
         {code.split("").map((char, i) => (
           <div

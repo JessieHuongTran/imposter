@@ -1,10 +1,10 @@
 import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useSocket } from "../../contexts/SocketContext.jsx";
+import { useSB, generateId } from "../../contexts/SupabaseContext.jsx";
 
 export default function OnlineJoin() {
   const navigate = useNavigate();
-  const { ensureConnected } = useSocket();
+  const sb = useSB();
   const [code, setCode] = useState(["", "", "", ""]);
   const [name, setName] = useState("");
   const [error, setError] = useState("");
@@ -43,19 +43,52 @@ export default function OnlineJoin() {
     setError("");
 
     try {
-      const socket = await ensureConnected();
-      socket.emit("join_room", { code: roomCode, name: name.trim() }, (res) => {
-        if (res.success) {
-          navigate("/imposter/online/lobby", {
-            state: { code: roomCode, isHost: false },
-          });
-        } else {
-          setError(res.error || "Could not join");
-          setJoining(false);
-        }
+      // Fetch the room
+      const { data: room, error: fetchError } = await sb
+        .from("imposter_rooms")
+        .select("*")
+        .eq("code", roomCode)
+        .single();
+
+      if (fetchError || !room) {
+        setError("Room not found");
+        setJoining(false);
+        return;
+      }
+
+      const roomData = room.data;
+
+      if (roomData.status !== "lobby") {
+        setError("Game already in progress");
+        setJoining(false);
+        return;
+      }
+
+      if (roomData.players.length >= roomData.maxPlayers) {
+        setError("Room is full");
+        setJoining(false);
+        return;
+      }
+
+      const playerId = generateId();
+      const updatedPlayers = [...roomData.players, { id: playerId, name: name.trim() }];
+
+      const { error: updateError } = await sb
+        .from("imposter_rooms")
+        .update({ data: { ...roomData, players: updatedPlayers } })
+        .eq("code", roomCode);
+
+      if (updateError) {
+        setError("Failed to join room");
+        setJoining(false);
+        return;
+      }
+
+      navigate("/imposter/online/lobby", {
+        state: { code: roomCode, isHost: false, playerId },
       });
     } catch (err) {
-      setError(err.message || "Could not connect to server");
+      setError(err.message || "Could not join room");
       setJoining(false);
     }
   }

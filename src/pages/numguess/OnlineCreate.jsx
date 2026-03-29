@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useSocket } from "../../contexts/SocketContext.jsx";
+import { useSB, generateId, generateCode } from "../../contexts/SupabaseContext.jsx";
 import { playFlipOpen } from "../../utils/sound.js";
 
 export default function NumGuessOnlineCreate() {
   const navigate = useNavigate();
-  const { ensureConnected } = useSocket();
+  const sb = useSB();
   const [secretInput, setSecretInput] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
@@ -21,19 +21,35 @@ export default function NumGuessOnlineCreate() {
     playFlipOpen();
 
     try {
-      const socket = await ensureConnected();
-      socket.emit("ng_create_room", { secretNumber: num }, (res) => {
-        if (res.success) {
-          navigate("/numguess/online/lobby", {
-            state: { code: res.code, isHost: true },
-          });
-        } else {
-          setError("Failed to create room");
-          setCreating(false);
-        }
+      const playerId = generateId();
+      const code = generateCode();
+
+      const roomData = {
+        players: {
+          p1: { id: playerId, secretNumber: num },
+          p2: null,
+        },
+        currentTurn: "p1",
+        guesses: [],
+        status: "waiting",
+        winner: null,
+      };
+
+      const { error: insertError } = await sb
+        .from("numguess_rooms")
+        .insert({ code, data: roomData });
+
+      if (insertError) {
+        setError("Failed to create room: " + insertError.message);
+        setCreating(false);
+        return;
+      }
+
+      navigate("/numguess/online/lobby", {
+        state: { code, isHost: true, playerId },
       });
     } catch (err) {
-      setError(err.message || "Could not connect to server");
+      setError(err.message || "Could not create room");
       setCreating(false);
     }
   }

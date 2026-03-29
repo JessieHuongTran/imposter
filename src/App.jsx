@@ -1,5 +1,5 @@
 import { Routes, Route } from "react-router-dom";
-import { SocketProvider } from "./contexts/SocketContext.jsx";
+import { SupabaseProvider } from "./contexts/SupabaseContext.jsx";
 import Home from "./pages/Home.jsx";
 import Anomia from "./pages/Anomia.jsx";
 
@@ -31,7 +31,7 @@ import NumGuessOnlineResult from "./pages/numguess/OnlineResult.jsx";
 
 export default function App() {
   return (
-    <SocketProvider>
+    <SupabaseProvider>
       <div className="scanlines min-h-dvh">
         <Routes>
           <Route path="/" element={<Home />} />
@@ -64,6 +64,6 @@ export default function App() {
           <Route path="/numguess/online/result" element={<NumGuessOnlineResult />} />
         </Routes>
       </div>
-    </SocketProvider>
+    </SupabaseProvider>
   );
 }

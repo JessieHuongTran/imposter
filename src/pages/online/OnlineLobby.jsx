@@ -1,18 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
-import { useSocket } from "../../contexts/SocketContext.jsx";
+import { useSB } from "../../contexts/SupabaseContext.jsx";
 import { startLobbyMusic, stopLobbyMusic } from "../../utils/sound.js";
+import categories from "../../data/categories.js";
 
 export default function OnlineLobby() {
-  const { socket } = useSocket();
+  const sb = useSB();
   const navigate = useNavigate();
   const location = useLocation();
-  const { code, isHost } = location.state || {};
+  const { code, isHost, playerId } = location.state || {};
 
   const [players, setPlayers] = useState([]);
-  const [lobbyHost, setLobbyHost] = useState(null);
   const [category, setCategory] = useState("");
   const [maxPlayers, setMaxPlayers] = useState(0);
+  const [hostId, setHostId] = useState(null);
+  const subscriptionRef = useRef(null);
 
   useEffect(() => {
     startLobbyMusic();
@@ -20,31 +22,125 @@ export default function OnlineLobby() {
   }, []);
 
   useEffect(() => {
-    if (!socket || !code) return;
+    if (!sb || !code) return;
 
-    function onLobbyUpdate(data) {
-      setPlayers(data.players);
-      setLobbyHost(data.host);
-      setCategory(data.category);
-      setMaxPlayers(data.maxPlayers);
+    // Initial fetch
+    async function fetchRoom() {
+      const { data: room } = await sb
+        .from("imposter_rooms")
+        .select("*")
+        .eq("code", code)
+        .single();
+
+      if (room) {
+        applyRoomData(room.data);
+      }
     }
 
-    function onCardDealt(cardData) {
-      stopLobbyMusic();
-      navigate("/imposter/online/card", { state: { code, ...cardData } });
+    function applyRoomData(data) {
+      setPlayers(data.players || []);
+      setCategory(data.category || "");
+      setMaxPlayers(data.maxPlayers || 0);
+      if (data.players?.length > 0) {
+        setHostId(data.players[0].id);
+      }
+
+      if (data.status === "revealing") {
+        stopLobbyMusic();
+        navigate("/imposter/online/card", {
+          state: { code, playerId, roomData: data },
+        });
+      }
     }
 
-    socket.on("lobby_update", onLobbyUpdate);
-    socket.on("card_dealt", onCardDealt);
+    fetchRoom();
+
+    // Subscribe to realtime changes
+    const channel = sb
+      .channel(`room-${code}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "imposter_rooms",
+          filter: `code=eq.${code}`,
+        },
+        (payload) => {
+          applyRoomData(payload.new.data);
+        }
+      )
+      .subscribe();
+
+    subscriptionRef.current = channel;
 
     return () => {
-      socket.off("lobby_update", onLobbyUpdate);
-      socket.off("card_dealt", onCardDealt);
+      if (subscriptionRef.current) {
+        sb.removeChannel(subscriptionRef.current);
+      }
     };
-  }, [socket, code, navigate]);
+  }, [sb, code, navigate, playerId]);
 
-  function handleStart() {
-    socket.emit("start_game", { code });
+  async function handleStart() {
+    // Fetch latest room state
+    const { data: room } = await sb
+      .from("imposter_rooms")
+      .select("*")
+      .eq("code", code)
+      .single();
+
+    if (!room) return;
+
+    const roomData = room.data;
+    const catData = categories[roomData.category];
+    if (!catData) return;
+
+    // Pick random word and hint
+    const wordIndex = Math.floor(Math.random() * catData.words.length);
+    const word = catData.words[wordIndex];
+    const hint = catData.hints[wordIndex % catData.hints.length];
+
+    // Determine imposter count
+    const playerCount = roomData.players.length;
+    const imposterCount = Math.max(1, Math.floor(playerCount / 2) - 1);
+
+    // Fisher-Yates shuffle to pick imposters
+    const indices = roomData.players.map((_, i) => i);
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+    const imposterIndices = new Set(indices.slice(0, imposterCount));
+
+    // Build gameData players
+    const gamePlayers = roomData.players.map((p, i) => {
+      const isImposter = imposterIndices.has(i);
+      return {
+        id: p.id,
+        name: p.name,
+        label: `Player ${i + 1}`,
+        isImposter,
+        word: isImposter ? hint : word,
+        role: isImposter ? "IMPOSTER" : "NORMAL",
+      };
+    });
+
+    // Pick first player from non-imposters
+    const nonImposters = gamePlayers.filter((p) => !p.isImposter);
+    const firstPlayer = nonImposters[Math.floor(Math.random() * nonImposters.length)];
+
+    const gameData = {
+      players: gamePlayers,
+      firstPlayerName: firstPlayer.name,
+    };
+
+    // Update room in Supabase
+    await sb
+      .from("imposter_rooms")
+      .update({
+        data: { ...roomData, status: "revealing", gameData, viewedCount: 0 },
+      })
+      .eq("code", code);
   }
 
   if (!code) {
@@ -89,18 +185,18 @@ export default function OnlineLobby() {
           Players ({players.length}/{maxPlayers})
         </p>
         <div className="flex flex-col gap-2">
-          {players.map((p, i) => (
+          {players.map((p) => (
             <div
               key={p.id}
               className={`flex items-center gap-3 rounded-lg border-2 px-4 py-3 ${
-                p.id === lobbyHost
+                p.id === hostId
                   ? "border-lime bg-lime/5"
                   : "border-gray-700 bg-bg"
               }`}
             >
-              <span className="text-lg">{p.id === lobbyHost ? "👑" : "🎮"}</span>
+              <span className="text-lg">{p.id === hostId ? "👑" : "🎮"}</span>
               <span className="font-body text-white text-base">{p.name}</span>
-              {p.id === lobbyHost && (
+              {p.id === hostId && (
                 <span className="text-lime font-body text-xs ml-auto">Host</span>
               )}
             </div>

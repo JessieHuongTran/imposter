@@ -1,62 +1,102 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useSocket } from "../../contexts/SocketContext.jsx";
+import { useSB } from "../../contexts/SupabaseContext.jsx";
 import { playFlipOpen } from "../../utils/sound.js";
 
 const AUTO_HIDE_DELAY = 4000;
 
 export default function OnlineCard() {
-  const { socket } = useSocket();
+  const sb = useSB();
   const navigate = useNavigate();
   const location = useLocation();
-  const { code, role, word, isImposter, playerName } = location.state || {};
+  const { code, playerId, roomData: initialRoomData } = location.state || {};
 
   const [revealed, setRevealed] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [viewProgress, setViewProgress] = useState(null);
+  const subscriptionRef = useRef(null);
+
+  // Find my card from gameData
+  const myCard = initialRoomData?.gameData?.players?.find((p) => p.id === playerId);
 
   useEffect(() => {
-    if (!socket || !code) return;
+    if (!sb || !code) return;
 
-    function onViewProgress(data) {
-      setViewProgress(data);
-    }
+    const channel = sb
+      .channel(`card-${code}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "imposter_rooms",
+          filter: `code=eq.${code}`,
+        },
+        (payload) => {
+          const data = payload.new.data;
+          const totalPlayers = data.players.length;
+          const viewedCount = data.viewedCount || 0;
 
-    function onAllViewed(data) {
-      navigate("/imposter/online/start", {
-        state: { firstPlayerName: data.firstPlayerName, code },
-      });
-    }
+          setViewProgress({ viewedCount, totalPlayers });
 
-    socket.on("view_progress", onViewProgress);
-    socket.on("all_viewed", onAllViewed);
+          if (viewedCount >= totalPlayers) {
+            navigate("/imposter/online/start", {
+              state: { firstPlayerName: data.gameData.firstPlayerName, code },
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    subscriptionRef.current = channel;
 
     return () => {
-      socket.off("view_progress", onViewProgress);
-      socket.off("all_viewed", onAllViewed);
+      if (subscriptionRef.current) {
+        sb.removeChannel(subscriptionRef.current);
+      }
     };
-  }, [socket, code, navigate]);
+  }, [sb, code, navigate]);
 
-  function handleReveal() {
+  async function handleReveal() {
     if (revealed) return;
     setRevealed(true);
     playFlipOpen();
 
     // Auto-hide after delay
-    setTimeout(() => {
+    setTimeout(async () => {
       setRevealed(false);
       setConfirmed(true);
-      socket.emit("card_viewed", { code });
+
+      // Increment viewedCount in Supabase
+      const { data: room } = await sb
+        .from("imposter_rooms")
+        .select("*")
+        .eq("code", code)
+        .single();
+
+      if (room) {
+        const updatedData = {
+          ...room.data,
+          viewedCount: (room.data.viewedCount || 0) + 1,
+        };
+
+        await sb
+          .from("imposter_rooms")
+          .update({ data: updatedData })
+          .eq("code", code);
+      }
     }, AUTO_HIDE_DELAY);
   }
 
-  if (!code || !role) {
+  if (!code || !myCard) {
     return (
       <div className="page-enter flex flex-col items-center justify-center min-h-dvh px-5 gap-4">
         <p className="text-gray-400 font-body">Missing card data.</p>
       </div>
     );
   }
+
+  const { role, word, isImposter, name: playerName } = myCard;
 
   // After confirming — waiting for others
   if (confirmed) {
