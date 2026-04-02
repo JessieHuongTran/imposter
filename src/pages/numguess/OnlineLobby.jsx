@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useSB } from "../../contexts/SupabaseContext.jsx";
 import { startLobbyMusic, stopLobbyMusic } from "../../utils/sound.js";
@@ -9,6 +9,18 @@ export default function NumGuessOnlineLobby() {
   const location = useLocation();
   const { code, isHost, playerId } = location.state || {};
   const subRef = useRef(null);
+  const [copied, setCopied] = useState(false);
+
+  function shareLink() {
+    const url = `${window.location.origin}/numguess/online/join?code=${code}`;
+    if (navigator.share) {
+      navigator.share({ title: "Join Number Guess!", url });
+    } else {
+      navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }
 
   useEffect(() => {
     startLobbyMusic();
@@ -74,7 +86,12 @@ export default function NumGuessOnlineLobby() {
           </div>
         ))}
       </div>
-      <p className="text-gray-500 font-body text-xs">Share this code with your opponent</p>
+      <button
+        onClick={shareLink}
+        className="neon-btn bg-bg text-cyan border-cyan box-glow-cyan text-xs py-2 px-4"
+      >
+        {copied ? "Link Copied!" : "Share Join Link"}
+      </button>
 
       <div className="flex flex-col items-center gap-3">
         <div className="w-6 h-6 border-2 border-cyan border-t-transparent rounded-full animate-spin" />

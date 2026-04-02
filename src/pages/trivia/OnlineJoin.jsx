@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useSB, generateId } from "../../contexts/SupabaseContext.jsx";
 import { playFlipOpen } from "../../utils/sound.js";
 
-export default function NumGuessOnlineJoin() {
+export default function TriviaOnlineJoin() {
   const navigate = useNavigate();
   const sb = useSB();
   const [searchParams] = useSearchParams();
@@ -11,7 +11,7 @@ export default function NumGuessOnlineJoin() {
   const [code, setCode] = useState(() =>
     prefill.length === 4 ? prefill.split("") : ["", "", "", ""]
   );
-  const [secretInput, setSecretInput] = useState("");
+  const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [joining, setJoining] = useState(false);
   const inputRefs = [useRef(), useRef(), useRef(), useRef()];
@@ -41,8 +41,8 @@ export default function NumGuessOnlineJoin() {
   async function handleJoin() {
     const roomCode = code.join("");
     if (roomCode.length < 4) return setError("Enter the full room code");
-    const num = parseInt(secretInput, 10);
-    if (isNaN(num) || num < 1 || num > 100) return setError("Enter a number between 1 and 100");
+    const trimmed = name.trim();
+    if (!trimmed) return setError("Enter your name");
 
     setJoining(true);
     setError("");
@@ -50,7 +50,7 @@ export default function NumGuessOnlineJoin() {
 
     try {
       const { data: room, error: fetchError } = await sb
-        .from("numguess_rooms")
+        .from("trivia_rooms")
         .select("*")
         .eq("code", roomCode)
         .single();
@@ -63,12 +63,7 @@ export default function NumGuessOnlineJoin() {
 
       const roomData = room.data;
 
-      if (roomData.players.p2) {
-        setError("Room is full");
-        setJoining(false);
-        return;
-      }
-      if (roomData.status !== "waiting") {
+      if (roomData.status !== "lobby") {
         setError("Game already started");
         setJoining(false);
         return;
@@ -77,15 +72,14 @@ export default function NumGuessOnlineJoin() {
       const playerId = generateId();
       const updatedData = {
         ...roomData,
-        players: {
+        players: [
           ...roomData.players,
-          p2: { id: playerId, secretNumber: num },
-        },
-        status: "playing",
+          { id: playerId, name: trimmed, score: 0 },
+        ],
       };
 
       const { error: updateError } = await sb
-        .from("numguess_rooms")
+        .from("trivia_rooms")
         .update({ data: updatedData })
         .eq("code", roomCode);
 
@@ -95,7 +89,9 @@ export default function NumGuessOnlineJoin() {
         return;
       }
 
-      navigate("/numguess/online/play", { state: { code: roomCode, role: "p2", playerId } });
+      navigate("/trivia/play", {
+        state: { code: roomCode, playerId, playerName: trimmed },
+      });
     } catch (err) {
       setError(err.message || "Could not join");
       setJoining(false);
@@ -104,7 +100,7 @@ export default function NumGuessOnlineJoin() {
 
   return (
     <div className="page-enter flex flex-col items-center px-5 py-8 min-h-dvh">
-      <Link to="/numguess/online" className="self-start text-gray-500 font-body text-sm no-underline mb-4">
+      <Link to="/trivia" className="self-start text-gray-500 font-body text-sm no-underline mb-4">
         ← Back
       </Link>
 
@@ -113,7 +109,7 @@ export default function NumGuessOnlineJoin() {
       </h1>
 
       <p className="text-gray-400 font-body text-sm mb-3">Room Code</p>
-      <div className="flex gap-3 mb-8">
+      <div className="flex gap-3 mb-6">
         {code.map((char, i) => (
           <input
             key={i}
@@ -130,18 +126,15 @@ export default function NumGuessOnlineJoin() {
         ))}
       </div>
 
-      <p className="text-gray-300 font-body text-base mb-2">Pick your secret number</p>
-      <p className="text-gray-600 font-body text-xs mb-4">1 – 100</p>
+      <p className="text-gray-300 font-body text-base mb-2">Your name</p>
 
       <input
-        type="number"
-        inputMode="numeric"
-        min="1"
-        max="100"
-        value={secretInput}
-        onChange={(e) => { setError(""); setSecretInput(e.target.value); }}
-        placeholder="1 – 100"
-        className="w-44 h-20 bg-bg border-2 border-orange rounded-xl text-center text-yellow font-heading text-3xl outline-none focus:box-glow-orange mb-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        type="text"
+        value={name}
+        onChange={(e) => { setError(""); setName(e.target.value); }}
+        placeholder="Enter name"
+        maxLength={16}
+        className="w-64 h-14 bg-bg border-2 border-cyan rounded-xl text-center text-white font-body text-lg outline-none focus:box-glow-cyan mb-8"
       />
 
       {error && <p className="text-pink font-body text-sm mb-4">{error}</p>}
@@ -151,7 +144,7 @@ export default function NumGuessOnlineJoin() {
         disabled={joining}
         className="neon-btn bg-bg text-yellow border-yellow box-glow-yellow text-lg w-full max-w-xs disabled:opacity-50"
       >
-        {joining ? "Joining..." : "LOCK IN & JOIN 🔒"}
+        {joining ? "Joining..." : "JOIN ROOM"}
       </button>
     </div>
   );

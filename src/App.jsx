@@ -18,6 +18,14 @@ import OnlineLobby from "./pages/online/OnlineLobby.jsx";
 import OnlineCard from "./pages/online/OnlineCard.jsx";
 import OnlineStart from "./pages/online/OnlineStart.jsx";
 
+// Trivia Buzz
+import TriviaOnlineMenu from "./pages/trivia/OnlineMenu.jsx";
+import TriviaOnlineCreate from "./pages/trivia/OnlineCreate.jsx";
+import TriviaOnlineJoin from "./pages/trivia/OnlineJoin.jsx";
+import TriviaOnlineLobby from "./pages/trivia/OnlineLobby.jsx";
+import TriviaHostBoard from "./pages/trivia/HostBoard.jsx";
+import TriviaPlayerBoard from "./pages/trivia/PlayerBoard.jsx";
+
 // Number Guess
 import NumGuessModeSelect from "./pages/numguess/ModeSelect.jsx";
 import NumGuessLocalSetup from "./pages/numguess/LocalSetup.jsx";
@@ -51,6 +59,14 @@ export default function App() {
           <Route path="/imposter/online/lobby" element={<OnlineLobby />} />
           <Route path="/imposter/online/card" element={<OnlineCard />} />
           <Route path="/imposter/online/start" element={<OnlineStart />} />
+
+          {/* Trivia Buzz */}
+          <Route path="/trivia" element={<TriviaOnlineMenu />} />
+          <Route path="/trivia/create" element={<TriviaOnlineCreate />} />
+          <Route path="/trivia/join" element={<TriviaOnlineJoin />} />
+          <Route path="/trivia/lobby" element={<TriviaOnlineLobby />} />
+          <Route path="/trivia/host" element={<TriviaHostBoard />} />
+          <Route path="/trivia/play" element={<TriviaPlayerBoard />} />
 
           {/* Number Guess: Mode → Local or Online */}
           <Route path="/numguess" element={<NumGuessModeSelect />} />

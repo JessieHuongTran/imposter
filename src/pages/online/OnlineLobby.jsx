@@ -14,7 +14,19 @@ export default function OnlineLobby() {
   const [category, setCategory] = useState("");
   const [maxPlayers, setMaxPlayers] = useState(0);
   const [hostId, setHostId] = useState(null);
+  const [copied, setCopied] = useState(false);
   const subscriptionRef = useRef(null);
+
+  function shareLink() {
+    const url = `${window.location.origin}/imposter/online/join?code=${code}`;
+    if (navigator.share) {
+      navigator.share({ title: "Join Imposter!", url });
+    } else {
+      navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }
 
   useEffect(() => {
     startLobbyMusic();
@@ -173,7 +185,12 @@ export default function OnlineLobby() {
           </div>
         ))}
       </div>
-      <p className="text-gray-500 font-body text-xs mb-6">Share this code with friends</p>
+      <button
+        onClick={shareLink}
+        className="neon-btn bg-bg text-cyan border-cyan box-glow-cyan text-xs py-2 px-4 mb-4"
+      >
+        {copied ? "Link Copied!" : "Share Join Link"}
+      </button>
 
       {category && (
         <p className="text-orange font-heading text-[10px] glow-orange mb-6">{category}</p>

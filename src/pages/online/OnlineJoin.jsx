@@ -1,11 +1,15 @@
 import { useState, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useSB, generateId } from "../../contexts/SupabaseContext.jsx";
 
 export default function OnlineJoin() {
   const navigate = useNavigate();
   const sb = useSB();
-  const [code, setCode] = useState(["", "", "", ""]);
+  const [searchParams] = useSearchParams();
+  const prefill = (searchParams.get("code") || "").toUpperCase().slice(0, 4);
+  const [code, setCode] = useState(() =>
+    prefill.length === 4 ? prefill.split("") : ["", "", "", ""]
+  );
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [joining, setJoining] = useState(false);

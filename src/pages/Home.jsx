@@ -18,6 +18,14 @@ const categories = [
         emoji: "🕵️",
       },
       {
+        name: "Trivia Buzz",
+        description: "Host reads questions, players race to buzz in!",
+        path: "/trivia",
+        cardClass: "border-orange box-glow-orange",
+        titleClass: "text-orange glow-orange",
+        emoji: "🔔",
+      },
+      {
         name: "Anomia",
         description: "Coming Soon",
         path: "/anomia",
