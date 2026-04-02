@@ -26,6 +26,14 @@ import TriviaOnlineLobby from "./pages/trivia/OnlineLobby.jsx";
 import TriviaHostBoard from "./pages/trivia/HostBoard.jsx";
 import TriviaPlayerBoard from "./pages/trivia/PlayerBoard.jsx";
 
+// Werewolf
+import MafiaOnlineMenu from "./pages/mafia/OnlineMenu.jsx";
+import MafiaOnlineCreate from "./pages/mafia/OnlineCreate.jsx";
+import MafiaOnlineJoin from "./pages/mafia/OnlineJoin.jsx";
+import MafiaOnlineLobby from "./pages/mafia/OnlineLobby.jsx";
+import MafiaHostBoard from "./pages/mafia/HostBoard.jsx";
+import MafiaPlayerBoard from "./pages/mafia/PlayerBoard.jsx";
+
 // Number Guess
 import NumGuessModeSelect from "./pages/numguess/ModeSelect.jsx";
 import NumGuessLocalSetup from "./pages/numguess/LocalSetup.jsx";
@@ -67,6 +75,14 @@ export default function App() {
           <Route path="/trivia/lobby" element={<TriviaOnlineLobby />} />
           <Route path="/trivia/host" element={<TriviaHostBoard />} />
           <Route path="/trivia/play" element={<TriviaPlayerBoard />} />
+
+          {/* Werewolf */}
+          <Route path="/mafia" element={<MafiaOnlineMenu />} />
+          <Route path="/mafia/create" element={<MafiaOnlineCreate />} />
+          <Route path="/mafia/join" element={<MafiaOnlineJoin />} />
+          <Route path="/mafia/lobby" element={<MafiaOnlineLobby />} />
+          <Route path="/mafia/host" element={<MafiaHostBoard />} />
+          <Route path="/mafia/play" element={<MafiaPlayerBoard />} />
 
           {/* Number Guess: Mode → Local or Online */}
           <Route path="/numguess" element={<NumGuessModeSelect />} />

@@ -26,6 +26,14 @@ const categories = [
         emoji: "🔔",
       },
       {
+        name: "Werewolf",
+        description: "Secret roles, night kills & village votes. Who's the wolf?",
+        path: "/mafia",
+        cardClass: "border-purple box-glow-purple",
+        titleClass: "text-purple glow-purple",
+        emoji: "🐺",
+      },
+      {
         name: "Anomia",
         description: "Coming Soon",
         path: "/anomia",
