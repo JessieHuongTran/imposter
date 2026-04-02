@@ -54,15 +54,22 @@ export default function MafiaOnlineLobby() {
   const [starting, setStarting] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  function shareLink() {
+  async function shareLink() {
     const url = `${window.location.origin}/mafia/join?code=${code}`;
-    if (navigator.share) {
-      navigator.share({ title: "Join Werewolf!", url });
-    } else {
-      navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = url;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
     }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   useEffect(() => {
