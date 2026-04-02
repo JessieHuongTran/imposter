@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { useSB } from "../../contexts/SupabaseContext.jsx";
-import { playBuzz, playTap, startLobbyMusic, stopLobbyMusic } from "../../utils/sound.js";
+import { playTap, startLobbyMusic, stopLobbyMusic } from "../../utils/sound.js";
 
 const ROLE_EMOJI = { werewolf: "🐺", hunter: "🏹", doctor: "💊", villager: "🏘️" };
 const ROLE_LABEL = { werewolf: "WEREWOLF", hunter: "HUNTER", doctor: "DOCTOR", villager: "VILLAGER" };
@@ -119,7 +119,7 @@ export default function MafiaPlayerBoard() {
     if (nightSubmitted) return;
     setNightTarget(targetId);
     setNightSubmitted(true);
-    playBuzz();
+    playTap();
 
     const me = roomData.players.find((p) => p.id === playerId);
     if (!me) return;

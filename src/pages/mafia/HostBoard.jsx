@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { useSB } from "../../contexts/SupabaseContext.jsx";
-import { playCorrect, playWrong, playTap } from "../../utils/sound.js";
+import { playTap } from "../../utils/sound.js";
 
 const ROLE_EMOJI = { werewolf: "🐺", hunter: "🏹", doctor: "💊", villager: "🏘️" };
 const ROLE_COLOR = {
@@ -179,8 +179,6 @@ export default function MafiaHostBoard() {
     if (deaths.length === 0 && saves.length === 0) logEntries.push("No one died");
     const nightLog = `Night ${current.round}: ${logEntries.join(", ")}`;
 
-    if (winner) playCorrect(); else playWrong();
-
     await sb.from("mafia_rooms").update({
       data: {
         ...current,
@@ -227,8 +225,6 @@ export default function MafiaHostBoard() {
     const dayMsg = target
       ? `Day ${current.round}: ${eliminatedName} eliminated (${eliminatedRole})`
       : `Day ${current.round}: No elimination (tied vote)`;
-
-    if (winner) playCorrect();
 
     await sb.from("mafia_rooms").update({
       data: {

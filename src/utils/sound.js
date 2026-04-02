@@ -1,4 +1,11 @@
 let audioCtx = null;
+let _muted = localStorage.getItem("muted") === "true";
+
+export function isMuted() { return _muted; }
+export function setMuted(v) {
+  _muted = v;
+  localStorage.setItem("muted", v ? "true" : "false");
+}
 
 function getAudioContext() {
   if (!audioCtx) {
@@ -8,6 +15,7 @@ function getAudioContext() {
 }
 
 function tone(freq, dur, type = "square", vol = 0.12) {
+  if (_muted) return;
   const ctx = getAudioContext();
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -23,6 +31,7 @@ function tone(freq, dur, type = "square", vol = 0.12) {
 
 // Card flip open — rising bleep
 export function playFlipOpen() {
+  if (_muted) return;
   const ctx = getAudioContext();
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -39,6 +48,7 @@ export function playFlipOpen() {
 
 // Card flip close — descending tone
 export function playFlipClose() {
+  if (_muted) return;
   const ctx = getAudioContext();
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -55,6 +65,7 @@ export function playFlipClose() {
 
 // Win fanfare — 4-note ascending arpeggio
 export function playStartGame() {
+  if (_muted) return;
   const ctx = getAudioContext();
   const notes = [523, 659, 784, 1047];
   notes.forEach((freq, i) => {
@@ -79,6 +90,7 @@ export function playTap() {
 
 // Game select — 2-note chime (used when tapping a game card)
 export function playSelect() {
+  if (_muted) return;
   const ctx = getAudioContext();
   [660, 990].forEach((freq, i) => {
     const osc = ctx.createOscillator();
@@ -107,6 +119,7 @@ export function playCountdownGo() {
 
 // Higher — rising pitch
 export function playHigher() {
+  if (_muted) return;
   const ctx = getAudioContext();
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -123,6 +136,7 @@ export function playHigher() {
 
 // Lower — falling pitch
 export function playLower() {
+  if (_muted) return;
   const ctx = getAudioContext();
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -139,6 +153,7 @@ export function playLower() {
 
 // Buzzer — loud alarm hit
 export function playBuzz() {
+  if (_muted) return;
   const ctx = getAudioContext();
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -157,6 +172,7 @@ export function playBuzz() {
 
 // Wrong answer — descending sad tone
 export function playWrong() {
+  if (_muted) return;
   const ctx = getAudioContext();
   [400, 300].forEach((freq, i) => {
     const osc = ctx.createOscillator();
@@ -174,6 +190,7 @@ export function playWrong() {
 
 // Correct guess — victory jingle
 export function playCorrect() {
+  if (_muted) return;
   const ctx = getAudioContext();
   [523, 659, 784, 1047, 1318].forEach((freq, i) => {
     const osc = ctx.createOscillator();
@@ -197,6 +214,7 @@ let lobbyTimeout = null;
 
 export function startLobbyMusic() {
   stopLobbyMusic();
+  if (_muted) return;
   const ctx = getAudioContext();
 
   // Melody: catchy arcade waiting tune

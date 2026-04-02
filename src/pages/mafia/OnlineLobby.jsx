@@ -6,7 +6,7 @@ import { startLobbyMusic, stopLobbyMusic, playStartGame } from "../../utils/soun
 // ── Role distribution table ──
 // [werewolves, hunter, doctor, villagers]
 const ROLE_TABLE = {
-  5:  [1, 1, 0, 3],
+  5:  [1, 0, 1, 3],
   6:  [2, 1, 1, 2],
   7:  [2, 1, 1, 3],
   8:  [3, 1, 1, 3],

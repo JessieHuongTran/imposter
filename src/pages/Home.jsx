@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { playTap, playFlipOpen, playSelect } from "../utils/sound.js";
+import { playTap, playFlipOpen, playSelect, isMuted, setMuted } from "../utils/sound.js";
 
 const categories = [
   {
@@ -110,6 +110,13 @@ function GameCard({ game }) {
 
 export default function Home() {
   const [openCat, setOpenCat] = useState(null);
+  const [muted, setMutedState] = useState(isMuted);
+
+  function toggleMute() {
+    const next = !muted;
+    setMutedState(next);
+    setMuted(next);
+  }
 
   function toggleCat(name) {
     playFlipOpen();
@@ -118,6 +125,15 @@ export default function Home() {
 
   return (
     <div className="page-enter flex flex-col items-center px-5 py-10 min-h-dvh">
+      {/* Mute toggle */}
+      <button
+        onClick={toggleMute}
+        className="self-end text-gray-500 font-body text-xl mb-2"
+        title={muted ? "Unmute" : "Mute"}
+      >
+        {muted ? "🔇" : "🔊"}
+      </button>
+
       <h1 className="font-heading text-yellow text-2xl leading-relaxed text-center glow-yellow mb-2">
         BOOM BOX
       </h1>
