@@ -3,10 +3,10 @@ import { useLocation, Link } from "react-router-dom";
 import { useSB } from "../../contexts/SupabaseContext.jsx";
 import { playCorrect, playWrong, playTap } from "../../utils/sound.js";
 
-const ROLE_EMOJI = { werewolf: "🐺", seer: "🔮", doctor: "💊", villager: "🏘️" };
+const ROLE_EMOJI = { werewolf: "🐺", hunter: "🏹", doctor: "💊", villager: "🏘️" };
 const ROLE_COLOR = {
   werewolf: "text-pink glow-pink",
-  seer: "text-purple glow-purple",
+  hunter: "text-cyan glow-cyan",
   doctor: "text-lime glow-lime",
   villager: "text-gray-400",
 };
@@ -20,7 +20,7 @@ function checkWin(players) {
   return null;
 }
 
-function getMajority(votes, allowTie) {
+function getMajority(votes, noElimOnTie) {
   const counts = {};
   Object.values(votes).forEach((tid) => {
     counts[tid] = (counts[tid] || 0) + 1;
@@ -30,8 +30,8 @@ function getMajority(votes, allowTie) {
   const max = Math.max(...Object.values(counts));
   const tied = Object.entries(counts).filter(([, c]) => c === max);
 
-  if (tied.length > 1 && allowTie) return null; // no elimination on tie
-  return tied[Math.floor(Math.random() * tied.length)][0]; // random tiebreak
+  if (tied.length > 1 && noElimOnTie) return null;
+  return tied[Math.floor(Math.random() * tied.length)][0];
 }
 
 export default function MafiaHostBoard() {
@@ -45,7 +45,7 @@ export default function MafiaHostBoard() {
 
   // Local action trackers (from broadcasts, reset each phase)
   const [wolfVotes, setWolfVotes] = useState({});
-  const [seerPeek, setSeerPeek] = useState(null);
+  const [hunterKill, setHunterKill] = useState(null);
   const [doctorSave, setDoctorSave] = useState(null);
   const [dayVotes, setDayVotes] = useState({});
 
@@ -76,8 +76,8 @@ export default function MafiaHostBoard() {
     const d = payload.payload;
     if (event === "wolf_vote") {
       setWolfVotes((prev) => ({ ...prev, [d.playerId]: d.targetId }));
-    } else if (event === "seer_peek") {
-      setSeerPeek(d.targetId);
+    } else if (event === "hunter_kill") {
+      setHunterKill(d.targetId);
     } else if (event === "doctor_save") {
       setDoctorSave(d.targetId);
     } else if (event === "day_vote") {
@@ -90,7 +90,7 @@ export default function MafiaHostBoard() {
     const channel = sb
       .channel(`mafia-${code}`)
       .on("broadcast", { event: "wolf_vote" }, handleBroadcast)
-      .on("broadcast", { event: "seer_peek" }, handleBroadcast)
+      .on("broadcast", { event: "hunter_kill" }, handleBroadcast)
       .on("broadcast", { event: "doctor_save" }, handleBroadcast)
       .on("broadcast", { event: "day_vote" }, handleBroadcast)
       .subscribe();
@@ -98,7 +98,7 @@ export default function MafiaHostBoard() {
     return () => { if (broadcastRef.current) sb.removeChannel(broadcastRef.current); };
   }, [sb, code, handleBroadcast]);
 
-  // ── Helper: read-then-write ──
+  // ── Helpers ──
   async function freshRoom() {
     const { data } = await sb.from("mafia_rooms").select("data").eq("code", code).single();
     return data?.data;
@@ -117,13 +117,12 @@ export default function MafiaHostBoard() {
     if (!current) return;
     const nextRound = current.round + 1;
     setWolfVotes({});
-    setSeerPeek(null);
+    setHunterKill(null);
     setDoctorSave(null);
     await writeRoom({
       phase: "night",
       round: nextRound,
       nightResult: null,
-      seerReveal: null,
       voteResult: null,
       log: [...current.log, `── Night ${nextRound} ──`],
     });
@@ -134,37 +133,51 @@ export default function MafiaHostBoard() {
     const current = await freshRoom();
     if (!current) return;
 
-    // Wolf majority target (random tiebreak)
     const wolfTarget = getMajority(wolfVotes, false);
-    const saved = doctorSave != null && doctorSave === wolfTarget;
+    const doctorTarget = doctorSave;
 
     let players = [...current.players];
-    let killedName = null;
+    const deaths = [];
+    const saves = [];
 
-    if (wolfTarget && !saved) {
-      players = players.map((p) =>
-        p.id === wolfTarget ? { ...p, alive: false } : p
-      );
-      killedName = players.find((p) => p.id === wolfTarget)?.name;
+    // Wolf kill
+    if (wolfTarget) {
+      if (doctorTarget === wolfTarget) {
+        const p = players.find((x) => x.id === wolfTarget);
+        if (p) saves.push({ id: p.id, name: p.name, from: "werewolves" });
+      } else {
+        players = players.map((p) =>
+          p.id === wolfTarget ? { ...p, alive: false } : p
+        );
+        const p = players.find((x) => x.id === wolfTarget);
+        if (p) deaths.push({ id: p.id, name: p.name, by: "werewolves" });
+      }
     }
 
-    // Seer reveal
-    let seerRevealData = null;
-    if (seerPeek) {
-      const target = players.find((p) => p.id === seerPeek);
-      seerRevealData = {
-        targetId: seerPeek,
-        targetName: target?.name,
-        isWerewolf: target?.role === "werewolf",
-      };
+    // Hunter kill
+    if (hunterKill) {
+      if (doctorTarget === hunterKill) {
+        const p = players.find((x) => x.id === hunterKill);
+        if (p && p.alive) saves.push({ id: p.id, name: p.name, from: "hunter" });
+      } else {
+        const p = players.find((x) => x.id === hunterKill);
+        if (p && p.alive) {
+          players = players.map((x) =>
+            x.id === hunterKill ? { ...x, alive: false } : x
+          );
+          deaths.push({ id: p.id, name: p.name, by: "hunter" });
+        }
+      }
     }
 
     const winner = checkWin(players);
-    const nightMsg = saved
-      ? `Night ${current.round}: No one died (doctor save!)`
-      : killedName
-      ? `Night ${current.round}: ${killedName} was killed`
-      : `Night ${current.round}: No one died`;
+
+    // Build log
+    const logEntries = [];
+    deaths.forEach((d) => logEntries.push(`${d.name} was killed (${d.by})`));
+    saves.forEach((s) => logEntries.push(`${s.name} was saved by doctor (from ${s.from})`));
+    if (deaths.length === 0 && saves.length === 0) logEntries.push("No one died");
+    const nightLog = `Night ${current.round}: ${logEntries.join(", ")}`;
 
     if (winner) playCorrect(); else playWrong();
 
@@ -173,19 +186,14 @@ export default function MafiaHostBoard() {
         ...current,
         players,
         phase: winner ? "ended" : "day",
-        nightResult: {
-          killedId: saved ? null : wolfTarget,
-          killedName: saved ? null : killedName,
-          saved,
-        },
-        seerReveal: seerRevealData,
+        nightResult: { deaths, saves },
         winner,
-        log: [...current.log, nightMsg],
+        log: [...current.log, nightLog],
       },
     }).eq("code", code);
 
     setWolfVotes({});
-    setSeerPeek(null);
+    setHunterKill(null);
     setDoctorSave(null);
   }
 
@@ -200,7 +208,7 @@ export default function MafiaHostBoard() {
     const current = await freshRoom();
     if (!current) return;
 
-    const target = getMajority(dayVotes, true); // null on tie
+    const target = getMajority(dayVotes, true);
 
     let players = [...current.players];
     let eliminatedName = null;
@@ -236,7 +244,7 @@ export default function MafiaHostBoard() {
     setDayVotes({});
   }
 
-  // ── Render helpers ──
+  // ── Render ──
   if (!code) {
     return (
       <div className="page-enter flex flex-col items-center justify-center min-h-dvh px-5 gap-4">
@@ -257,21 +265,26 @@ export default function MafiaHostBoard() {
   const { players, phase, round, nightResult, voteResult, winner, log } = roomData;
   const alive = players.filter((p) => p.alive);
   const aliveWolves = alive.filter((p) => p.role === "werewolf");
-  const aliveSeer = alive.find((p) => p.role === "seer");
+  const aliveHunter = alive.find((p) => p.role === "hunter");
   const aliveDoctor = alive.find((p) => p.role === "doctor");
 
   const nameOf = (id) => players.find((p) => p.id === id)?.name || "?";
+  const roleOf = (id) => players.find((p) => p.id === id)?.role || "?";
 
-  // Count expected night actions
+  // Night action progress
   const wolfsDone = Object.keys(wolfVotes).length;
   const wolfsExpected = aliveWolves.length;
-  const seerDone = !aliveSeer || seerPeek != null;
+  const hunterDone = !aliveHunter || hunterKill != null;
   const doctorDone = !aliveDoctor || doctorSave != null;
-  const allNightDone = wolfsDone >= wolfsExpected && seerDone && doctorDone;
+  const allNightDone = wolfsDone >= wolfsExpected && hunterDone && doctorDone;
 
-  // Day vote counts
-  const aliveNonDead = alive.length;
+  // Day vote progress
   const dayVotesDone = Object.keys(dayVotes).length;
+  const dayVotesExpected = alive.length;
+
+  // Vote tally for host
+  const voteCounts = {};
+  Object.values(dayVotes).forEach((tid) => { voteCounts[tid] = (voteCounts[tid] || 0) + 1; });
 
   // ── ENDED ──
   if (phase === "ended") {
@@ -297,7 +310,6 @@ export default function MafiaHostBoard() {
           ))}
         </div>
 
-        {/* Log */}
         <div className="w-full max-w-sm">
           <h2 className="font-heading text-[10px] text-gray-500 mb-2">GAME LOG</h2>
           <div className="text-gray-500 font-body text-xs space-y-1 max-h-48 overflow-y-auto">
@@ -324,21 +336,11 @@ export default function MafiaHostBoard() {
 
       {/* Phase badge */}
       <div className="mb-4">
-        {phase === "roles" && (
-          <span className="font-heading text-sm text-purple glow-purple leading-relaxed">ROLE REVEAL</span>
-        )}
-        {phase === "night" && (
-          <span className="font-heading text-sm text-cyan glow-cyan leading-relaxed pulse-glow">NIGHT {round}</span>
-        )}
-        {phase === "day" && (
-          <span className="font-heading text-sm text-yellow glow-yellow leading-relaxed">DAY {round}</span>
-        )}
-        {phase === "day_vote" && (
-          <span className="font-heading text-sm text-orange glow-orange leading-relaxed pulse-glow">VOTING</span>
-        )}
-        {phase === "vote_result" && (
-          <span className="font-heading text-sm text-pink glow-pink leading-relaxed">VOTE RESULT</span>
-        )}
+        {phase === "roles" && <span className="font-heading text-sm text-purple glow-purple leading-relaxed">ROLE REVEAL</span>}
+        {phase === "night" && <span className="font-heading text-sm text-cyan glow-cyan leading-relaxed pulse-glow">NIGHT {round}</span>}
+        {phase === "day" && <span className="font-heading text-sm text-yellow glow-yellow leading-relaxed">DAY {round} — ANNOUNCE</span>}
+        {phase === "day_vote" && <span className="font-heading text-sm text-orange glow-orange leading-relaxed pulse-glow">VOTING</span>}
+        {phase === "vote_result" && <span className="font-heading text-sm text-pink glow-pink leading-relaxed">VOTE RESULT — ANNOUNCE</span>}
       </div>
 
       {/* Player roster (always visible) */}
@@ -359,7 +361,7 @@ export default function MafiaHostBoard() {
 
       {/* ── PHASE CONTROLS ── */}
 
-      {/* ROLES phase */}
+      {/* ROLES */}
       {phase === "roles" && (
         <div className="flex flex-col items-center gap-4 w-full max-w-xs">
           <p className="text-gray-400 font-body text-sm text-center">
@@ -372,7 +374,7 @@ export default function MafiaHostBoard() {
         </div>
       )}
 
-      {/* NIGHT phase */}
+      {/* NIGHT */}
       {phase === "night" && (
         <div className="flex flex-col gap-3 w-full max-w-xs">
           <h3 className="font-heading text-[10px] text-gray-500 text-center">NIGHT ACTIONS</h3>
@@ -389,15 +391,15 @@ export default function MafiaHostBoard() {
             ))}
           </div>
 
-          {/* Seer peek */}
-          {aliveSeer && (
+          {/* Hunter kill */}
+          {aliveHunter && (
             <div className="border border-gray-800 rounded-lg px-3 py-2">
-              <p className="font-heading text-[9px] text-purple mb-1">
-                🔮 SEER {seerPeek ? "✓" : ""}
+              <p className="font-heading text-[9px] text-cyan mb-1">
+                🏹 HUNTER {hunterKill ? "✓" : ""}
               </p>
               <p className="font-body text-xs text-gray-400">
-                {seerPeek
-                  ? <><span className="text-purple">{nameOf(seerPeek)}</span> → {players.find((p) => p.id === seerPeek)?.role === "werewolf" ? <span className="text-pink">WEREWOLF!</span> : <span className="text-lime">Not a wolf</span>}</>
+                {hunterKill
+                  ? <span className="text-cyan">Killing {nameOf(hunterKill)} ({roleOf(hunterKill)})</span>
                   : <span className="text-gray-600">waiting...</span>}
               </p>
             </div>
@@ -425,23 +427,29 @@ export default function MafiaHostBoard() {
         </div>
       )}
 
-      {/* DAY phase (show night result, open discussion) */}
+      {/* DAY — host sees night result and announces verbally */}
       {phase === "day" && (
         <div className="flex flex-col items-center gap-4 w-full max-w-xs">
-          {nightResult && (
-            <div className="border-2 border-gray-700 rounded-xl px-5 py-4 w-full text-center">
-              {nightResult.saved ? (
-                <p className="font-body text-lime text-sm">No one died! The doctor saved them.</p>
-              ) : nightResult.killedName ? (
-                <p className="font-body text-pink text-sm">
-                  💀 <span className="font-heading text-xs">{nightResult.killedName}</span> was killed in the night.
+          <div className="border-2 border-gray-700 rounded-xl px-5 py-4 w-full">
+            <p className="font-heading text-[10px] text-gray-500 mb-2 text-center">ANNOUNCE TO PLAYERS:</p>
+            {nightResult && nightResult.deaths.length > 0 ? (
+              nightResult.deaths.map((d, i) => (
+                <p key={i} className="font-body text-pink text-sm text-center mb-1">
+                  💀 {d.name} was killed {d.by === "werewolves" ? "by the werewolves" : "by the hunter"}
                 </p>
-              ) : (
-                <p className="font-body text-gray-400 text-sm">A peaceful night. No one died.</p>
-              )}
-            </div>
-          )}
-          <p className="text-gray-500 font-body text-xs text-center">Discussion phase — let players talk.</p>
+              ))
+            ) : (
+              <p className="font-body text-gray-400 text-sm text-center">No one died tonight.</p>
+            )}
+            {nightResult?.saves.length > 0 && nightResult.saves.map((s, i) => (
+              <p key={i} className="font-body text-lime text-sm text-center mt-1">
+                💊 Someone was saved by the doctor!
+              </p>
+            ))}
+          </div>
+          <p className="text-gray-500 font-body text-xs text-center">
+            Announce the result, then let players discuss.
+          </p>
           <button onClick={openDayVote}
             className="neon-btn bg-bg text-orange border-orange box-glow-orange text-base w-full py-4">
             OPEN VOTING
@@ -449,50 +457,71 @@ export default function MafiaHostBoard() {
         </div>
       )}
 
-      {/* DAY_VOTE phase */}
+      {/* DAY_VOTE — host sees all votes (players cannot) */}
       {phase === "day_vote" && (
         <div className="flex flex-col gap-3 w-full max-w-xs">
           <h3 className="font-heading text-[10px] text-orange text-center">
-            VOTES ({dayVotesDone}/{aliveNonDead})
+            VOTES ({dayVotesDone}/{dayVotesExpected})
           </h3>
-          {alive.map((p) => {
-            const votesForThis = Object.values(dayVotes).filter((t) => t === p.id).length;
-            return (
-              <div key={p.id} className="flex items-center justify-between border border-gray-800 rounded-lg px-3 py-2">
-                <span className="font-body text-white text-xs">{p.name}</span>
-                <div className="flex items-center gap-2">
-                  {votesForThis > 0 && (
-                    <div className="h-3 bg-orange/30 rounded" style={{ width: `${votesForThis * 20}px` }} />
-                  )}
-                  <span className="font-heading text-xs text-orange">{votesForThis}</span>
-                </div>
-              </div>
-            );
-          })}
+
+          {/* Who voted for whom (host only) */}
+          <div className="border border-gray-800 rounded-lg px-3 py-2">
+            {Object.entries(dayVotes).map(([voterId, targetId]) => (
+              <p key={voterId} className="font-body text-xs text-gray-400">
+                {nameOf(voterId)} → <span className="text-orange">{nameOf(targetId)}</span>
+              </p>
+            ))}
+            {dayVotesDone === 0 && (
+              <p className="font-body text-xs text-gray-600">Waiting for votes...</p>
+            )}
+          </div>
+
+          {/* Tally */}
+          {dayVotesDone > 0 && (
+            <div className="border border-gray-800 rounded-lg px-3 py-2">
+              <p className="font-heading text-[9px] text-gray-500 mb-1">TALLY</p>
+              {alive.map((p) => {
+                const count = voteCounts[p.id] || 0;
+                if (count === 0) return null;
+                return (
+                  <div key={p.id} className="flex items-center justify-between">
+                    <span className="font-body text-xs text-white">{p.name}</span>
+                    <span className="font-heading text-xs text-orange">{count}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           <button onClick={resolveDay}
-            disabled={dayVotesDone < aliveNonDead}
+            disabled={dayVotesDone < dayVotesExpected}
             className="neon-btn bg-bg text-yellow border-yellow box-glow-yellow text-sm w-full py-3 mt-2 disabled:opacity-40">
-            {dayVotesDone >= aliveNonDead ? "RESOLVE VOTE" : "WAITING FOR VOTES..."}
+            {dayVotesDone >= dayVotesExpected ? "RESOLVE VOTE" : "WAITING FOR VOTES..."}
           </button>
         </div>
       )}
 
-      {/* VOTE_RESULT phase */}
+      {/* VOTE_RESULT — host announces verbally */}
       {phase === "vote_result" && (
         <div className="flex flex-col items-center gap-4 w-full max-w-xs">
-          {voteResult && (
-            <div className="border-2 border-gray-700 rounded-xl px-5 py-4 w-full text-center">
-              {voteResult.tie ? (
-                <p className="font-body text-gray-400 text-sm">Tied vote — no one is eliminated.</p>
-              ) : (
-                <p className="font-body text-pink text-sm">
-                  💀 <span className="font-heading text-xs">{voteResult.eliminatedName}</span> was eliminated.
-                  <br />
-                  <span className="text-gray-500 text-xs">They were a {ROLE_EMOJI[voteResult.eliminatedRole]} {voteResult.eliminatedRole}.</span>
+          <div className="border-2 border-gray-700 rounded-xl px-5 py-4 w-full">
+            <p className="font-heading text-[10px] text-gray-500 mb-2 text-center">ANNOUNCE TO PLAYERS:</p>
+            {voteResult?.tie ? (
+              <p className="font-body text-gray-400 text-sm text-center">Tied vote — no one is eliminated.</p>
+            ) : (
+              <>
+                <p className="font-body text-pink text-sm text-center">
+                  💀 {voteResult?.eliminatedName} was eliminated!
                 </p>
-              )}
-            </div>
-          )}
+                <p className="text-gray-500 font-body text-xs text-center mt-1">
+                  They were a {ROLE_EMOJI[voteResult?.eliminatedRole]} {voteResult?.eliminatedRole}.
+                </p>
+              </>
+            )}
+          </div>
+          <p className="text-gray-500 font-body text-xs text-center">
+            Announce the result to the group.
+          </p>
           <button onClick={advanceToNight}
             className="neon-btn bg-bg text-cyan border-cyan box-glow-cyan text-base w-full py-4">
             NEXT NIGHT →

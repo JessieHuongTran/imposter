@@ -1,26 +1,26 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { useSB } from "../../contexts/SupabaseContext.jsx";
-import { playBuzz, playTap, playCorrect, startLobbyMusic, stopLobbyMusic } from "../../utils/sound.js";
+import { playBuzz, playTap, startLobbyMusic, stopLobbyMusic } from "../../utils/sound.js";
 
-const ROLE_EMOJI = { werewolf: "🐺", seer: "🔮", doctor: "💊", villager: "🏘️" };
-const ROLE_LABEL = { werewolf: "WEREWOLF", seer: "SEER", doctor: "DOCTOR", villager: "VILLAGER" };
+const ROLE_EMOJI = { werewolf: "🐺", hunter: "🏹", doctor: "💊", villager: "🏘️" };
+const ROLE_LABEL = { werewolf: "WEREWOLF", hunter: "HUNTER", doctor: "DOCTOR", villager: "VILLAGER" };
 const ROLE_COLOR = {
   werewolf: "text-pink glow-pink",
-  seer: "text-purple glow-purple",
+  hunter: "text-cyan glow-cyan",
   doctor: "text-lime glow-lime",
   villager: "text-gray-300",
 };
 const ROLE_BORDER = {
   werewolf: "border-pink box-glow-pink",
-  seer: "border-purple box-glow-purple",
+  hunter: "border-cyan box-glow-cyan",
   doctor: "border-lime box-glow-lime",
   villager: "border-gray-600",
 };
 const ROLE_DESC = {
   werewolf: "Choose someone to eliminate each night. Don't get caught!",
-  seer: "Each night, peek at one player to learn if they're a werewolf.",
-  doctor: "Each night, choose one player to protect from the wolves.",
+  hunter: "Each night, choose one player to kill. Use your power wisely.",
+  doctor: "Each night, choose one player to protect from death.",
   villager: "Find and vote out the werewolves during the day!",
 };
 
@@ -38,7 +38,6 @@ export default function MafiaPlayerBoard() {
   const [dayTarget, setDayTarget] = useState(null);
   const [daySubmitted, setDaySubmitted] = useState(false);
   const [otherWolfVotes, setOtherWolfVotes] = useState({});
-  const [dayTally, setDayTally] = useState({});
   const prevPhaseRef = useRef(null);
 
   // Fetch initial state
@@ -81,7 +80,6 @@ export default function MafiaPlayerBoard() {
           if (data.phase === "day_vote") {
             setDayTarget(null);
             setDaySubmitted(false);
-            setDayTally({});
           }
         }
       })
@@ -90,7 +88,7 @@ export default function MafiaPlayerBoard() {
     return () => { if (subRef.current) sb.removeChannel(subRef.current); };
   }, [sb, code, playerId, waiting]);
 
-  // Subscribe to broadcast channel (send + receive)
+  // Subscribe to broadcast channel
   useEffect(() => {
     if (!sb || !code) return;
     const channel = sb
@@ -100,10 +98,6 @@ export default function MafiaPlayerBoard() {
         if (d.playerId !== playerId) {
           setOtherWolfVotes((prev) => ({ ...prev, [d.playerId]: d.targetId }));
         }
-      })
-      .on("broadcast", { event: "day_vote" }, (payload) => {
-        const d = payload.payload;
-        setDayTally((prev) => ({ ...prev, [d.playerId]: d.targetId }));
       })
       .subscribe();
     broadcastRef.current = channel;
@@ -132,8 +126,8 @@ export default function MafiaPlayerBoard() {
 
     if (me.role === "werewolf") {
       sendBroadcast("wolf_vote", { playerId, targetId });
-    } else if (me.role === "seer") {
-      sendBroadcast("seer_peek", { playerId, targetId });
+    } else if (me.role === "hunter") {
+      sendBroadcast("hunter_kill", { playerId, targetId });
     } else if (me.role === "doctor") {
       sendBroadcast("doctor_save", { playerId, targetId });
     }
@@ -176,7 +170,7 @@ export default function MafiaPlayerBoard() {
     );
   }
 
-  const { players, phase, round, nightResult, seerReveal, voteResult, winner } = roomData;
+  const { players, phase, round, winner } = roomData;
   const me = players.find((p) => p.id === playerId);
   if (!me) return <p className="text-gray-400 p-8 text-center font-body">Player not found in game.</p>;
 
@@ -188,17 +182,12 @@ export default function MafiaPlayerBoard() {
   // Selectable targets for night actions
   const nightTargets =
     myRole === "werewolf" ? alive.filter((p) => p.role !== "werewolf") :
-    myRole === "seer" ? alive.filter((p) => p.id !== playerId) :
+    myRole === "hunter" ? alive.filter((p) => p.id !== playerId) :
     myRole === "doctor" ? alive :
     [];
 
-  // Day vote tallies
-  const voteCounts = {};
-  Object.values(dayTally).forEach((tid) => { voteCounts[tid] = (voteCounts[tid] || 0) + 1; });
-
   // ── ENDED ──
   if (phase === "ended") {
-    playCorrect();
     return (
       <div className="page-enter flex flex-col items-center px-5 py-8 min-h-dvh">
         <h1 className="font-heading text-yellow text-base glow-yellow mb-2 text-center leading-relaxed">GAME OVER</h1>
@@ -244,7 +233,7 @@ export default function MafiaPlayerBoard() {
   return (
     <div className="page-enter flex flex-col items-center px-5 py-6 min-h-dvh gap-5">
 
-      {/* ── ROLES phase: reveal card ── */}
+      {/* ── ROLES phase ── */}
       {phase === "roles" && (
         <div className="flex flex-col items-center justify-center flex-1 gap-4">
           <div className={`border-4 ${ROLE_BORDER[myRole]} rounded-2xl px-8 py-10 flex flex-col items-center gap-3`}>
@@ -266,7 +255,7 @@ export default function MafiaPlayerBoard() {
             </div>
           )}
 
-          <p className="text-gray-600 font-body text-xs">Waiting for host to begin night...</p>
+          <p className="text-gray-600 font-body text-xs">Waiting for the moderator...</p>
         </div>
       )}
 
@@ -293,7 +282,7 @@ export default function MafiaPlayerBoard() {
             <div className="w-full max-w-xs">
               <p className="font-body text-gray-300 text-sm mb-3 text-center">
                 {myRole === "werewolf" && "Choose a victim to kill:"}
-                {myRole === "seer" && "Choose someone to investigate:"}
+                {myRole === "hunter" && "Choose someone to eliminate:"}
                 {myRole === "doctor" && "Choose someone to protect:"}
               </p>
               <div className="flex flex-col gap-2">
@@ -302,7 +291,7 @@ export default function MafiaPlayerBoard() {
                     onClick={() => submitNightAction(p.id)}
                     className={`neon-btn bg-bg text-white text-sm w-full py-3 ${
                       myRole === "werewolf" ? "border-pink" :
-                      myRole === "seer" ? "border-purple" :
+                      myRole === "hunter" ? "border-cyan" :
                       "border-lime"
                     }`}>
                     {p.name}
@@ -334,7 +323,7 @@ export default function MafiaPlayerBoard() {
               <span className="text-3xl">✓</span>
               <p className={`font-heading text-xs ${ROLE_COLOR[myRole]} text-center leading-relaxed`}>
                 {myRole === "werewolf" && `Target: ${players.find((p) => p.id === nightTarget)?.name}`}
-                {myRole === "seer" && `Investigating: ${players.find((p) => p.id === nightTarget)?.name}`}
+                {myRole === "hunter" && `Target: ${players.find((p) => p.id === nightTarget)?.name}`}
                 {myRole === "doctor" && `Protecting: ${players.find((p) => p.id === nightTarget)?.name}`}
               </p>
               <p className="text-gray-600 font-body text-xs">Waiting for dawn...</p>
@@ -343,47 +332,24 @@ export default function MafiaPlayerBoard() {
         </>
       )}
 
-      {/* ── DAY phase: night result + discussion ── */}
+      {/* ── DAY phase: listen to moderator ── */}
       {phase === "day" && (
         <div className="flex flex-col items-center justify-center flex-1 gap-4">
           <p className="font-heading text-sm text-yellow glow-yellow leading-relaxed">
             DAY {round}
           </p>
-
-          {/* Night result */}
-          {nightResult && (
-            <div className="border-2 border-gray-700 rounded-xl px-6 py-4 text-center">
-              {nightResult.saved ? (
-                <p className="font-body text-lime text-sm">The doctor saved someone last night!</p>
-              ) : nightResult.killedName ? (
-                <p className="font-body text-pink text-sm">
-                  💀 {nightResult.killedName} was killed in the night.
-                </p>
-              ) : (
-                <p className="font-body text-gray-400 text-sm">A peaceful night. No one died.</p>
-              )}
-            </div>
-          )}
-
-          {/* Seer: private reveal */}
-          {myRole === "seer" && seerReveal && (
-            <div className="border-2 border-purple rounded-xl px-5 py-3 text-center">
-              <p className="font-body text-purple text-xs">
-                🔮 {seerReveal.targetName} is{" "}
-                {seerReveal.isWerewolf
-                  ? <span className="text-pink font-heading text-xs">A WEREWOLF!</span>
-                  : <span className="text-lime font-heading text-xs">NOT a werewolf.</span>}
-              </p>
-            </div>
-          )}
-
-          <p className="text-gray-500 font-body text-xs text-center">
-            Discuss with the village. The host will open voting soon.
+          <span className="text-4xl">🌅</span>
+          <p className="font-heading text-xs text-gray-400 text-center leading-relaxed">
+            LISTEN TO THE MODERATOR
+          </p>
+          <p className="text-gray-600 font-body text-xs text-center">
+            The moderator will announce what happened last night.<br />
+            Then discuss with the village.
           </p>
         </div>
       )}
 
-      {/* ── DAY_VOTE phase ── */}
+      {/* ── DAY_VOTE phase: blind voting ── */}
       {phase === "day_vote" && (
         <>
           <p className="font-heading text-sm text-orange glow-orange leading-relaxed">
@@ -392,68 +358,38 @@ export default function MafiaPlayerBoard() {
 
           {!daySubmitted ? (
             <div className="w-full max-w-xs flex flex-col gap-2">
-              {alive.filter((p) => p.id !== playerId).map((p) => {
-                const count = voteCounts[p.id] || 0;
-                return (
-                  <button key={p.id}
-                    onClick={() => submitDayVote(p.id)}
-                    className="neon-btn bg-bg text-white border-orange text-sm w-full py-3 flex items-center justify-between px-4">
-                    <span>{p.name}</span>
-                    {count > 0 && <span className="font-heading text-xs text-orange">{count}</span>}
-                  </button>
-                );
-              })}
+              {alive.filter((p) => p.id !== playerId).map((p) => (
+                <button key={p.id}
+                  onClick={() => submitDayVote(p.id)}
+                  className="neon-btn bg-bg text-white border-orange text-sm w-full py-3">
+                  {p.name}
+                </button>
+              ))}
             </div>
           ) : (
             <div className="flex flex-col items-center gap-3 flex-1 justify-center">
               <span className="text-3xl">🗳️</span>
               <p className="font-heading text-xs text-orange text-center leading-relaxed">
-                Voted: {players.find((p) => p.id === dayTarget)?.name}
+                Vote submitted
               </p>
-
-              {/* Live tally */}
-              <div className="w-full max-w-xs flex flex-col gap-1 mt-3">
-                {alive.map((p) => {
-                  const count = voteCounts[p.id] || 0;
-                  return (
-                    <div key={p.id} className="flex items-center justify-between px-3 py-1">
-                      <span className="font-body text-gray-400 text-xs">{p.name}</span>
-                      <div className="flex items-center gap-2">
-                        {count > 0 && (
-                          <div className="h-2 bg-orange/30 rounded" style={{ width: `${count * 16}px` }} />
-                        )}
-                        <span className="font-heading text-xs text-orange w-4 text-right">{count || ""}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <p className="text-gray-600 font-body text-xs">Waiting for all votes...</p>
+              <p className="text-gray-600 font-body text-xs text-center">
+                Waiting for everyone to vote...
+              </p>
             </div>
           )}
         </>
       )}
 
-      {/* ── VOTE_RESULT phase ── */}
+      {/* ── VOTE_RESULT phase: listen to moderator ── */}
       {phase === "vote_result" && (
         <div className="flex flex-col items-center justify-center flex-1 gap-4">
-          {voteResult && (
-            <div className="border-2 border-gray-700 rounded-xl px-6 py-4 text-center">
-              {voteResult.tie ? (
-                <p className="font-body text-gray-400 text-sm">Tied vote. No one is eliminated.</p>
-              ) : (
-                <>
-                  <p className="font-body text-pink text-sm mb-1">
-                    💀 {voteResult.eliminatedName} was eliminated!
-                  </p>
-                  <p className="text-gray-500 font-body text-xs">
-                    They were a {ROLE_EMOJI[voteResult.eliminatedRole]} {voteResult.eliminatedRole}.
-                  </p>
-                </>
-              )}
-            </div>
-          )}
-          <p className="text-gray-600 font-body text-xs">Waiting for host to start next night...</p>
+          <span className="text-4xl">📢</span>
+          <p className="font-heading text-xs text-gray-400 text-center leading-relaxed">
+            LISTEN TO THE MODERATOR
+          </p>
+          <p className="text-gray-600 font-body text-xs text-center">
+            The moderator will announce the vote result.
+          </p>
         </div>
       )}
     </div>

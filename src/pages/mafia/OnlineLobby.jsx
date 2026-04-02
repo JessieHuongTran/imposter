@@ -4,7 +4,7 @@ import { useSB } from "../../contexts/SupabaseContext.jsx";
 import { startLobbyMusic, stopLobbyMusic, playStartGame } from "../../utils/sound.js";
 
 // ── Role distribution table ──
-// [werewolves, seer, doctor, villagers]
+// [werewolves, hunter, doctor, villagers]
 const ROLE_TABLE = {
   5:  [1, 1, 0, 3],
   6:  [2, 1, 1, 2],
@@ -19,14 +19,14 @@ const ROLE_TABLE = {
 export function getRoleCounts(n) {
   if (ROLE_TABLE[n]) return ROLE_TABLE[n];
   const ww = Math.max(1, Math.floor(n / 2) - 1);
-  const seer = 1;
+  const hunter = 1;
   const doc = n >= 6 ? 1 : 0;
-  return [ww, seer, doc, n - ww - seer - doc];
+  return [ww, hunter, doc, n - ww - hunter - doc];
 }
 
 function assignRoles(players) {
   const n = players.length;
-  const [ww, seer, doc] = getRoleCounts(n);
+  const [ww, hunter, doc] = getRoleCounts(n);
 
   // Fisher-Yates shuffle
   const indices = players.map((_, i) => i);
@@ -38,7 +38,7 @@ function assignRoles(players) {
   let pos = 0;
   const roles = new Array(n).fill("villager");
   for (let i = 0; i < ww; i++) roles[indices[pos++]] = "werewolf";
-  for (let i = 0; i < seer; i++) roles[indices[pos++]] = "seer";
+  for (let i = 0; i < hunter; i++) roles[indices[pos++]] = "hunter";
   for (let i = 0; i < doc; i++) roles[indices[pos++]] = "doctor";
 
   return players.map((p, i) => ({ ...p, role: roles[i], alive: true }));
@@ -126,7 +126,7 @@ export default function MafiaOnlineLobby() {
     if (!room) return;
 
     const assigned = assignRoles(room.data.players);
-    const [ww, seer, doc, vil] = getRoleCounts(assigned.length);
+    const [ww, hunter, doc, vil] = getRoleCounts(assigned.length);
 
     const updatedData = {
       ...room.data,
@@ -135,7 +135,7 @@ export default function MafiaOnlineLobby() {
       phase: "roles",
       round: 0,
       log: [
-        `Roles: ${ww} Werewolf, ${seer} Seer, ${doc ? "1 Doctor, " : ""}${vil} Villager`,
+        `Roles: ${ww} Werewolf, ${hunter} Hunter, ${doc ? "1 Doctor, " : ""}${vil} Villager`,
       ],
     };
 
@@ -161,7 +161,7 @@ export default function MafiaOnlineLobby() {
   }
 
   const n = players.length;
-  const [ww, seer, doc, vil] = n >= 5 ? getRoleCounts(n) : [0, 0, 0, 0];
+  const [ww, hunter, doc, vil] = n >= 5 ? getRoleCounts(n) : [0, 0, 0, 0];
 
   return (
     <div className="page-enter flex flex-col items-center justify-center min-h-dvh px-5 gap-6">
@@ -191,7 +191,7 @@ export default function MafiaOnlineLobby() {
       {n >= 5 && (
         <div className="flex gap-4 text-center">
           <div><span className="text-lg">🐺</span><p className="font-heading text-[9px] text-pink glow-pink">{ww}</p></div>
-          <div><span className="text-lg">🔮</span><p className="font-heading text-[9px] text-purple glow-purple">{seer}</p></div>
+          <div><span className="text-lg">🏹</span><p className="font-heading text-[9px] text-cyan glow-cyan">{hunter}</p></div>
           {doc > 0 && <div><span className="text-lg">💊</span><p className="font-heading text-[9px] text-lime glow-lime">{doc}</p></div>}
           <div><span className="text-lg">🏘️</span><p className="font-heading text-[9px] text-gray-400">{vil}</p></div>
         </div>
